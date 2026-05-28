@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ダークファンタジーRPG</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-black">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // === データ定義（画像パスを public/images/ の .png に変更） ===
+    const MONSTERS = [
+      { id: 1, name: '猿ゴブリン', maxHp: 30, image: 'public/images/sarugoburinn.png' },
+      { id: 2, name: '爆走板チャリ女', maxHp: 40, image: 'public/images/itatyarionnna.png' },
+      { id: 3, name: 'ラマザル', maxHp: 50, image: 'public/images/ramasaru.png' },
+      { id: 4, name: '猿ゴーレム', maxHp: 60, image: 'public/images/sarugo-remu.png' },
+      { id: 5, name: '脳筋クマ', maxHp: 80, image: 'public/images/noukinkuma.png' },
+      { id: 6, name: '猿人王', maxHp: 100, image: 'public/images/enzinou.png' },
+      { id: 7, name: 'シマシマハゲ', maxHp: 200, image: 'public/images/simasimahage.png' },
+    ];
+
+    const NORIKO_IMG = 'public/images/noriko.png';
+
+    const INITIAL_BOX_COUNTS = { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0, G: 0, H: 0, I: 0, J: 0, K: 0, L: 0 };
+    const EXTRAS = {
+      A: '洗濯ばさみ。', B: '電気。', C: 'ガムテープ。', D: 'センブリ茶。', E: '足つぼ。',
+      F: '酸っぱい。', G: '型抜きチャレンジ。', H: 'カップ麺。', I: 'サソリ。', J: 'セミ。', K: '激辛。', L: 'スプレー。'
+    };
+
+    const STATUS_DEF = {
+      monkey: { name: 'モンキーランス', isEquip: true },
+      cursed: { name: '呪いのテディベア', isEquip: true },
+      nishinari: { name: '西成の紋章', isEquip: true },
+      poison: { name: '毒状態', isEquip: false },
+      paralysis: { name: '麻痺状態', isEquip: false },
+      modoku: { name: '猛毒状態', isEquip: false },
+      ring: { name: '結婚指輪の誓い', isEquip: true }
+    };
+
+    const ITEM_DEF = {
+      vaccine: { name: 'ワクチン', desc: 'モンスターになった人間を元に戻すことができる。', type: 'none', value: 0 },
+      takidashi: { name: '炊き出し', desc: '使用後、モンスターを猛毒状態にする。\n(毎ターン5ダメージ、2〜8ターン持続)', type: 'takidashi', value: 0 },
+      ring: { name: '結婚指輪', desc: '仲間が一人いなくなる代わりに、次のターンから５ターンの間、10以下のダメージを与える際、追加で10ダメージを与える。', type: 'ring', value: 0 },
+      gigafile: { name: '証拠のギガファイル', desc: '30ダメージを与える。一切のバフ、デバフを受けない。', type: 'gigafile', value: 30 },
+      shima_cloth: { name: 'シマシマの服', desc: '何に使うんだろう…。', type: 'none', value: 0 },
+      companion_wakasa: { name: '仲間：わかさ', desc: '【常時発動】敵が回復する際、5ダメージを与える。', type: 'companion', value: 0 },
+      companion_kuma: { name: '仲間：クマ', desc: '【常時発動】敵にダメージを与える際、30％の確率でダメージを2倍にする。', type: 'companion', value: 0 },
+      companion_kirin: { name: '仲間：キリン', desc: '【常時発動】効果は、何も無い。', type: 'companion', value: 0 },
+      fake_family: { name: '偽りのファミリー', desc: '【永続効果】敵がHPを全回復する際、HPを10回復に変換する。', type: 'companion', value: 0 },
+    };
+
+    const shuffleArray = (array) => {
+      const newArray = [...array];
+      for (let i = newArray.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+      }
+      return newArray;
+    };
+
+    const createGachaPool = (monsterIdx = 0) => {
+      const pool = [];
+      const add = (count, item) => {
+        for (let i = 0; i < count; i++) pool.push({ ...item, id: Math.random().toString(36).substring(7) });
+      };
+
+      add(1, { type: 'get_item', itemId: 'vaccine', text: '道具「ワクチン」を獲得。\n効果は「モンスターになった人間を元に戻すことができる。」' });
+      add(1, { type: 'get_item', itemId: 'takidashi', text: '道具「炊き出し」を獲得。\n効果は「使用後、モンスターを猛毒状態にする。毎ターン５ダメージを与える、ランダムで2から8ターン持続する。」' });
+      add(1, { type: 'get_item', itemId: 'shima_cloth', text: '道具「シマシマの服」を獲得した。\n効果は、何に使うんだろう…。' });
+      
+      add(10, { type: 'damage', text: '物理攻撃で５ダメージ与えた。ビンタ５回。', damage: 5 });
+      add(10, { type: 'damage', text: '物理攻撃で10ダメージ与えた。ビンタ10回。', damage: 10 });
+      add(3, { type: 'damage_box', text: '魔法攻撃で20ダメージ与えた。箱Bを開ける。', damage: 20, box: 'B' });
+      add(5, { type: 'damage_box', text: '魔法攻撃で15ダメージ与えた。箱Aを開ける。', damage: 15, box: 'A' });
+      add(2, { type: 'damage_box', text: '罠にはめて25ダメージ与えた。箱Cを開ける。', damage: 25, box: 'C' });
+      add(5, { type: 'heal_box', text: '敵は回復薬を飲んで10回復した。箱Dを開ける。', heal: 10, box: 'D' });
+      add(4, { type: 'heal_box', text: '敵は食事をして30回復した。箱Hを開ける。', heal: 30, box: 'H' });
+      add(2, { type: 'heal_box', text: '敵は保存食を食べて20回復した。箱Iを開ける。', heal: 20, box: 'I' });
+      add(2, { type: 'heal_box', text: '敵は保存食を食べて15回復した。箱Jを開ける。', heal: 15, box: 'J' });
+      add(7, { type: 'damage_box', text: '罠にはめて15ダメージ与えた。箱Eを開ける。', damage: 15, box: 'E' });
+      add(5, { type: 'damage_box', text: '毒を盛って10ダメージ与えた。箱Fを開ける。', damage: 10, box: 'F' });
+      
+      add(2, { type: 'damage_box', text: '魔法攻撃で15ダメージ与えた。箱Kを開ける。', damage: 15, box: 'K' });
+      add(2, { type: 'damage_box', text: '魔法攻撃で15ダメージ与えた。箱Lを開ける。', damage: 15, box: 'L' });
+
+      if (monsterIdx >= 5) {
+        add(5, { type: 'damage_box', text: '毒を盛って30ダメージ与えた。箱Kを開ける。', damage: 30, box: 'K' });
+      }
+
+      add(5, { type: 'special_likes', text: '特殊ダメージ。ひろろの好きな所を最大５個言う。\n（1つにつき2ダメージ与える）' });
+      add(5, { type: 'special_likes_reduce', text: '特殊ダメージ10を与える。ひろろが対象者の好きな所を最大5個言う。\n（1つにつき1軽減する）', baseDamage: 10 });
+      add(3, { type: 'event_boxG', text: 'イベント発生。箱Gを開ける。\n成功でHP全回復。失敗でHP半減。', box: 'G' });
+      add(2, { type: 'event_appA', text: 'イベント発生。カード引きゲームを行い、ENDが出るまで引き続け、出た合計のダメージを与える。' });
+      
+      add(1, { type: 'choice_firework', id_suffix: 1, text: 'ドキドキの二択。花火を投げる？' });
+      add(1, { type: 'choice_firework', id_suffix: 2, text: 'ドキドキの二択。花火を投げる？' });
+      add(1, { type: 'choice_firework', id_suffix: 3, text: 'ドキドキの二択。花火を投げる？' });
+      add(1, { type: 'choice_firework', id_suffix: 4, text: 'ドキドキの二択。花火を投げる？' });
+      add(1, { type: 'choice_firework', id_suffix: 5, text: 'ドキドキの二択。花火を投げる？' });
+      add(1, { type: 'choice_firework', id_suffix: 6, text: 'ドキドキの二択。花火を投げる？' });
+      add(1, { type: 'choice_firework', id_suffix: 7, text: 'ドキドキの二択。花火を投げる？' });
+      add(1, { type: 'choice_firework', id_suffix: 8, text: 'ドキドキの二択。花火を投げる？' });
+
+      return shuffleArray(pool);
+    };
+
+    function App() {
+      const getInitialState = () => {
+        const saved = localStorage.getItem('dungeon_rpg_save');
+        if (saved) {
+          try { return JSON.parse(saved); } catch (e) { console.error("Save data parse error"); }
+        }
+        return null;
+      };
+      const saveData = getInitialState();
+
+      const [hasSeenIntro, setHasSeenIntro] = useState(saveData?.hasSeenIntro ?? false);
+      const [introPhase, setIntroPhase] = useState(saveData?.introPhase ?? 0);
+      const [displayedIntroText, setDisplayedIntroText] = useState('');
+      const [isIntroTyping, setIsIntroTyping] = useState(false);
+
+      const [monsterIndex, setMonsterIndex] = useState(saveData?.monsterIndex ?? 0);
+      const [hp, setHp] = useState(saveData?.hp ?? MONSTERS[0].maxHp);
+      const [gachaPool, setGachaPool] = useState(saveData?.gachaPool ?? createGachaPool(saveData?.monsterIndex ?? 0));
+      const [boxCounts, setBoxCounts] = useState(saveData?.boxCounts ?? INITIAL_BOX_COUNTS);
+      
+      const [statuses, setStatuses] = useState(saveData?.statuses ?? []);
+      const [shimaTurns, setShimaTurns] = useState(saveData?.shimaTurns ?? 0);
+      const [inventory, setInventory] = useState(saveData?.inventory ?? []);
+      
+      const [isNorikoActive, setIsNorikoActive] = useState(saveData?.isNorikoActive ?? false);
+      const [norikoHp, setNorikoHp] = useState(saveData?.norikoHp ?? 5);
+      const [hasSummonedNoriko, setHasSummonedNoriko] = useState(saveData?.hasSummonedNoriko ?? false);
+
+      const [totalGachaCount, setTotalGachaCount] = useState(saveData?.totalGachaCount ?? 0);
+      const [ringDropTarget, setRingDropTarget] = useState(saveData?.ringDropTarget ?? Math.floor(Math.random() * 11) + 20);
+      const [hasDroppedRing, setHasDroppedRing] = useState(saveData?.hasDroppedRing ?? false);
+
+      const [hasGivenShimaCloth, setHasGivenShimaCloth] = useState(saveData?.hasGivenShimaCloth ?? false);
+      const [monsterMaxHpModifier, setMonsterMaxHpModifier] = useState(saveData?.monsterMaxHpModifier ?? 0);
+
+      const [showInventory, setShowInventory] = useState(false);
+      const [selectedItemIndex, setSelectedItemIndex] = useState(null);
+
+      const [drawnItem, setDrawnItem] = useState(null);
+      const [showScroll, setShowScroll] = useState(false);
+      const [isRolling, setIsRolling] = useState(false);
+      const [choiceResult, setChoiceResult] = useState(null);
+      const [actionSummary, setActionSummary] = useState(null); 
+      
+      const [appAState, setAppAState] = useState({
+        isActive: false, totalDamage: 0, cards: [], revealedCardIndex: null, isAnimating: false
+      });
+
+      const [displayedText, setDisplayedText] = useState('');
+      const [isTyping, setIsTyping] = useState(false);
+      const [isScrollOpened, setIsScrollOpened] = useState(false);
+      
+      const [isWarning, setIsWarning] = useState(false);
+      const [isDefeated, setIsDefeated] = useState(false);
+      const [gameClear, setGameClear] = useState(saveData?.gameClear ?? false);
+      const [log, setLog] = useState(saveData?.log ?? ['ダンジョンに足を踏み入れた！']);
+      
+      const [showResetConfirm, setShowResetConfirm] = useState(false);
+      
+      const [showShimaIntro, setShowShimaIntro] = useState(false);
+      const [showKingIntro, setShowKingIntro] = useState(false);
+      const [showNorikoIntro, setShowNorikoIntro] = useState(false);
+
+      const [showAppearance, setShowAppearance] = useState(false);
+      const appearanceTimerRef = useRef(null);
+      const tapTimerRef = useRef(null);
+
+      const [encounterStoryText, setEncounterStoryText] = useState(null);
+      const [encounterDisplayedText, setEncounterDisplayedText] = useState('');
+      const [isEncounterTyping, setIsEncounterTyping] = useState(false);
+
+      const [farewellData, setFarewellData] = useState(null);
+      const [farewellDisplayedText, setFarewellDisplayedText] = useState('');
+      const [isFarewellTyping, setIsFarewellTyping] = useState(false);
+
+      const [postDefeatState, setPostDefeatState] = useState(null);
+      const [postDefeatDisplayedText, setPostDefeatDisplayedText] = useState('');
+      const [isPostDefeatTyping, setIsPostDefeatTyping] = useState(false);
+
+      const [showRingModal, setShowRingModal] = useState(false);
+      const [tapCount, setTapCount] = useState(0);
+      
+      const [showDoorEffect, setShowDoorEffect] = useState(false);
+      
+      const [showTreasureEffect, setShowTreasureEffect] = useState(false);
+      const [isOpeningTreasure, setIsOpeningTreasure] = useState(false);
+
+      const [flashKey, setFlashKey] = useState(0); 
+
+      const [isProcessingQueue, setIsProcessingQueue] = useState(false);
+      const [textEffect, setTextEffect] = useState(null); 
+      const [popupEffect, setPopupEffect] = useState(null);
+
+      const currentMonster = MONSTERS[monsterIndex];
+      const displayMonsterName = isNorikoActive ? 'のりこちゃん' : currentMonster.name;
+      const displayHp = isNorikoActive ? norikoHp : hp;
+      const displayMaxHp = isNorikoActive ? 5 : currentMonster.maxHp + monsterMaxHpModifier;
+      const displayImage = isNorikoActive ? NORIKO_IMG : currentMonster.image;
+
+      useEffect(() => {
+        if (!encounterStoryText) { setEncounterDisplayedText(''); setIsEncounterTyping(false); return; }
+        setIsEncounterTyping(true); setEncounterDisplayedText(''); let i = 0;
+        const t = setInterval(() => { setEncounterDisplayedText(encounterStoryText.substring(0, ++i)); if (i >= encounterStoryText.length) { clearInterval(t); setIsEncounterTyping(false); } }, 60);
+        return () => clearInterval(t);
+      }, [encounterStoryText]);
+      const handleEncounterClick = (e) => { e.stopPropagation(); if (isEncounterTyping) { setEncounterDisplayedText(encounterStoryText); setIsEncounterTyping(false); } else setEncounterStoryText(null); };
+
+      useEffect(() => {
+        if (!farewellData) { setFarewellDisplayedText(''); setIsFarewellTyping(false); return; }
+        setIsFarewellTyping(true); setFarewellDisplayedText(''); let i = 0;
+        const t = setInterval(() => { setFarewellDisplayedText(farewellData.text.substring(0, ++i)); if (i >= farewellData.text.length) { clearInterval(t); setIsFarewellTyping(false); } }, 60);
+        return () => clearInterval(t);
+      }, [farewellData]);
+      const handleFarewellClick = (e) => { e.stopPropagation(); if (isFarewellTyping) { setFarewellDisplayedText(farewellData.text); setIsFarewellTyping(false); } else handleFarewellNext(); };
+
+      useEffect(() => {
+        if (!postDefeatState) { setPostDefeatDisplayedText(''); setIsPostDefeatTyping(false); return; }
+        setIsPostDefeatTyping(true); setPostDefeatDisplayedText(''); let i = 0;
+        const t = setInterval(() => { setPostDefeatDisplayedText(postDefeatState.text.substring(0, ++i)); if (i >= postDefeatState.text.length) { clearInterval(t); setIsPostDefeatTyping(false); } }, 60);
+        return () => clearInterval(t);
+      }, [postDefeatState?.text, postDefeatState?.key]); 
+      const handlePostDefeatContainerClick = (e) => { if (e) e.stopPropagation(); if (isPostDefeatTyping) { setPostDefeatDisplayedText(postDefeatState.text); setIsPostDefeatTyping(false); } };
+
+      useEffect(() => {
+        if (!showScroll || !isScrollOpened) { setDisplayedText(''); setIsTyping(false); return; }
+        let fullText = actionSummary ? actionSummary.text : (choiceResult ? choiceResult.text : (drawnItem ? drawnItem.text : ''));
+        if (!fullText) return;
+        fullText = fullText.replace(/([。、])(?!\n)(?!$)/g, '$1\n');
+        setIsTyping(true); setDisplayedText(''); let i = 0;
+        const t = setInterval(() => { setDisplayedText(fullText.substring(0, ++i)); if (i >= fullText.length) { clearInterval(t); setIsTyping(false); } }, 60);
+        return () => clearInterval(t);
+      }, [drawnItem, choiceResult, actionSummary, showScroll, isScrollOpened]);
+
+      const triggerAppearance = (idx) => {
+        setShowAppearance(true);
+        if (appearanceTimerRef.current) clearTimeout(appearanceTimerRef.current);
+        appearanceTimerRef.current = setTimeout(() => {
+          setShowAppearance(false);
+          if (idx === 1) setEncounterStoryText("キリン\n「あれは、わかさ？！なんでこんな所に、でも様子がおかしい、、まさか、、、ワクチンで直せるかも」");
+          else if (idx === 4) setEncounterStoryText("わかさ\n「あれはクマちゃん？筋肉の量が少なくなってるけどやはりモンスター化してるらしい、、」");
+          else if (idx === 5) setEncounterStoryText("わかさ\n「私のひろろ！見るも無残な姿に…待っててね！今私が助けるから！あぁん///」");
+        }, 2500);
+      };
+
+      const triggerDamageFlash = () => setFlashKey(prev => prev + 1);
+
+      const handleMonsterTap = () => {
+        if (isDefeated || showDoorEffect || showAppearance || postDefeatState || encounterStoryText || farewellData || isProcessingQueue || showTreasureEffect) return;
+
+        setTapCount((prev) => {
+          const newCount = prev + 1;
+          if (newCount >= 10) {
+            addLog(`【裏技】10連続タップで${displayMonsterName}を一撃で倒した！`);
+            triggerDamageFlash();
+            setPopupEffect({ val: isNorikoActive ? norikoHp : hp, type: 'damage', key: Math.random() });
+            setTimeout(() => setPopupEffect(null), 1500);
+
+            if (isNorikoActive) {
+              setNorikoHp(0);
+              setIsNorikoActive(false);
+              addLog("のりこちゃんを倒した！\n猿人王が再び立ちはだかる！");
+            } else {
+              setHp(0);
+              handleDefeat();
+            }
+            return 0;
+          }
+          return newCount;
+        });
+
+        if (tapTimerRef.current) clearTimeout(tapTimerRef.current);
+        tapTimerRef.current = setTimeout(() => setTapCount(0), 1000);
+      };
+
+      useEffect(() => {
+        if (hasSeenIntro && hp === MONSTERS[monsterIndex].maxHp && !isNorikoActive) triggerAppearance(monsterIndex);
+      }, []);
+
+      useEffect(() => {
+        if (showScroll) {
+          const timer = setTimeout(() => setIsScrollOpened(true), 1500);
+          return () => clearTimeout(timer);
+        } else {
+          setIsScrollOpened(false);
+        }
+      }, [showScroll]);
+
+      useEffect(() => {
+        if (showDoorEffect) {
+          const timer = setTimeout(() => {
+            setShowDoorEffect(false);
+            setPostDefeatState({ type: 'maakun_story_1', text: "ひろろ\n「え？まーくん？なんでこんな所にいるの、死んだはずじゃ…」" });
+          }, 4000); 
+          return () => clearTimeout(timer);
+        }
+      }, [showDoorEffect]);
+
+      useEffect(() => {
+        if (showTreasureEffect) {
+          const t1 = setTimeout(() => setIsOpeningTreasure(true), 1500);
+          const t2 = setTimeout(() => {
+            setShowTreasureEffect(false);
+            setIsOpeningTreasure(false);
+            setPostDefeatState({ type: 'treasure_opened', text: "箱Mを開ける。" });
+          }, 3000);
+          return () => { clearTimeout(t1); clearTimeout(t2); }
+        }
+      }, [showTreasureEffect]);
+
+      useEffect(() => {
+        const dataToSave = { 
+          monsterIndex, hp, gachaPool, boxCounts, statuses, shimaTurns, inventory, gameClear, log, 
+          isNorikoActive, norikoHp, hasSummonedNoriko, hasSeenIntro, introPhase, totalGachaCount, ringDropTarget, hasDroppedRing,
+          hasGivenShimaCloth, monsterMaxHpModifier 
+        };
+        localStorage.setItem('dungeon_rpg_save', JSON.stringify(dataToSave));
+      }, [monsterIndex, hp, gachaPool, boxCounts, statuses, shimaTurns, inventory, gameClear, log, isNorikoActive, norikoHp, hasSummonedNoriko, hasSeenIntro, introPhase, totalGachaCount, ringDropTarget, hasDroppedRing, hasGivenShimaCloth, monsterMaxHpModifier]);
+
+      const executeReset = () => {
+        localStorage.removeItem('dungeon_rpg_save');
+        setHasSeenIntro(false); setIntroPhase(0); setDisplayedIntroText(''); setIsIntroTyping(false);
+        setMonsterIndex(0); setHp(MONSTERS[0].maxHp); setGachaPool(createGachaPool(0));
+        setBoxCounts(INITIAL_BOX_COUNTS); setStatuses([]); setShimaTurns(0); setInventory([]);
+        setGameClear(false); setLog(['ダンジョンに足を踏み入れた！']); setDrawnItem(null); setShowScroll(false);
+        setIsDefeated(false); setIsWarning(false); setShowResetConfirm(false); setIsNorikoActive(false); setHasSummonedNoriko(false); setTapCount(0);
+        setEncounterStoryText(null); setEncounterDisplayedText(''); setIsEncounterTyping(false);
+        setFarewellData(null); setFarewellDisplayedText(''); setIsFarewellTyping(false);
+        setPostDefeatState(null); setPostDefeatDisplayedText(''); setIsPostDefeatTyping(false);
+        setTotalGachaCount(0); setRingDropTarget(Math.floor(Math.random() * 11) + 20); setHasDroppedRing(false);
+        setActionSummary(null); setPopupEffect(null); setShowDoorEffect(false); setIsProcessingQueue(false);
+        setAppAState({ isActive: false, totalDamage: 0, cards: [], revealedCardIndex: null, isAnimating: false });
+        setHasGivenShimaCloth(false); setMonsterMaxHpModifier(0); setShowTreasureEffect(false); setIsOpeningTreasure(false);
+      };
+      
+      useEffect(() => {
+        if (hasSeenIntro && monsterIndex === 5 && hp === MONSTERS[5].maxHp && !isDefeated && !isNorikoActive) {
+          setIsWarning(true); addLog("⚠️ 危険な気配がする...！猿人王が現れた！");
+          setTimeout(() => { setIsWarning(false); setShowKingIntro(true); }, 3500);
+        }
+      }, [monsterIndex, hasSeenIntro]);
+
+      const addLog = (msg) => setLog(prev => [msg, ...prev].slice(0, 5));
+      const hasStatus = (id) => statuses.some(s => s.id === id && s.turns > 0);
+
+      const handleDrawGacha = () => {
+        if (isProcessingQueue) return;
+        if (isNorikoActive) {
+          setIsRolling(true); setShowScroll(false);
+          setTimeout(() => {
+            setDrawnItem({ type: 'noriko_force', text: '強制イベント。\n１ダメージを与える。', damage: 1 });
+            setIsRolling(false); setShowScroll(true);
+          }, 1000);
+          return;
+        }
+
+        if (gachaPool.length === 0) {
+          addLog("ガチャの中身が空になった！新しく補充された！");
+          setGachaPool(createGachaPool(monsterIndex));
+          return;
+        }
+
+        const currentCount = totalGachaCount + 1;
+        setTotalGachaCount(currentCount);
+
+        if (currentCount >= ringDropTarget && !hasDroppedRing) {
+          setHasDroppedRing(true); setIsRolling(true); setShowScroll(false); setChoiceResult(null);
+          setDrawnItem({ type: 'get_item', itemId: 'ring', text: '道具「結婚指輪」を獲得。\n効果は「仲間が一人いなくなる代わりに、次のターンから５ターンの間、10以下のダメージを与える際、追加で10ダメージを与える。」', id: Math.random().toString(36).substring(7) });
+          setTimeout(() => { setIsRolling(false); setShowScroll(true); }, 1000);
+          return;
+        }
+        
+        setIsRolling(true); setShowScroll(false); setChoiceResult(null); setActionSummary(null);
+        const poolCopy = [...gachaPool]; const item = poolCopy.pop(); setGachaPool(poolCopy);
+        let finalItem = { ...item };
+        if (item.box) {
+          const newCounts = { ...boxCounts }; newCounts[item.box] = (newCounts[item.box] || 0) + 1; setBoxCounts(newCounts);
+          if (newCounts[item.box] >= 2) finalItem.text = finalItem.text.replace(`箱${item.box}を開ける。`, EXTRAS[item.box]);
+        }
+        setDrawnItem(finalItem);
+        setTimeout(() => { setIsRolling(false); setShowScroll(true); }, 1000);
+      };
+
+      const startAppAGame = () => {
+        setAppAState({
+          isActive: true, totalDamage: 0, cards: shuffleArray(['1', '2', '3', 'END']), revealedCardIndex: null, isAnimating: false
+        });
+      };
+
+      const handleAppACardClick = (index) => {
+        if (appAState.isAnimating || appAState.revealedCardIndex !== null) return;
+        const selectedCard = appAState.cards[index];
+        setAppAState(prev => ({ ...prev, revealedCardIndex: index, isAnimating: true }));
+        
+        setTimeout(() => {
+          if (selectedCard === 'END') {
+             handleActionStep1(appAState.totalDamage);
+             setAppAState(prev => ({ ...prev, isActive: false }));
+          } else {
+             const damage = parseInt(selectedCard);
+             setAppAState(prev => ({
+               isActive: true, totalDamage: prev.totalDamage + damage, cards: shuffleArray(['1', '2', '3', 'END']), revealedCardIndex: null, isAnimating: false
+             }));
+          }
+        }, 1500); 
+      };
+
+      const handleActionStep1 = (actionValue = null) => {
+        if (!drawnItem || isProcessingQueue) return;
+
+        let damageAmount = 0; let healAmount = 0; let newStatus = null; let baseLogMsg = '';
+        const { type, damage, heal, baseDamage, id_suffix } = drawnItem;
+
+        if (isNorikoActive && type === 'noriko_force') {
+          let actualDmg = 1; let breakdown = [`基礎ダメージ: 1`]; let effects = []; let logMsgs = [];
+          if (hasStatus('monkey')) { actualDmg *= 2; breakdown.push(`モンキーランス(x2): ${actualDmg}`); }
+          if (inventory.includes('companion_kuma') && Math.random() < 0.3) { 
+            actualDmg *= 2; breakdown.push(`クマの猛撃(x2): ${actualDmg}`);
+            effects.push({ type: 'text', style: 'kuma', text: 'クマの猛撃！\nダメージ2倍！' }); logMsgs.push(`(クマの猛撃！)`);
+          }
+          if (hasStatus('ring') && actualDmg <= 10) { actualDmg += 10; breakdown.push(`結婚指輪(+10): ${actualDmg}`); }
+
+          const summaryData = {
+            isNoriko: true, actualDmg, effects, netChange: -actualDmg,
+            text: `【 計算の内訳 】\n${breakdown.join('\n')}\n------------------\n【 合計 ${actualDmg} のダメージを与えた！ 】`,
+            logMsg: `のりこちゃんに${actualDmg}のダメージ！${logMsgs.join('')}`
+          };
+          if (breakdown.length > 1) setActionSummary(summaryData); else handleActionStep2(summaryData);
+          return;
+        }
+
+        if (type === 'damage' || type === 'damage_box') { damageAmount = damage; baseLogMsg = `${damageAmount}のダメージを与えた！`; }
+        else if (type === 'heal_box') { healAmount = heal; baseLogMsg = `敵のHPが${healAmount}回復した...`; }
+        else if (type === 'special_likes') { damageAmount = actionValue * 2; baseLogMsg = `${actionValue}個言えた！${damageAmount}のダメージ！`; }
+        else if (type === 'special_likes_reduce') { damageAmount = baseDamage - actionValue; baseLogMsg = `${actionValue}個言えた！ダメージが${damageAmount}に軽減された！`; }
+        else if (type === 'event_boxG') {
+          if (actionValue === 'success') { healAmount = 9999; baseLogMsg = `成功！しかし敵のHPが全回復してしまった...！`; }
+          else { damageAmount = Math.ceil(hp / 2); baseLogMsg = `失敗...敵のHPを半減させた！(${damageAmount}ダメージ)`; }
+        } else if (type === 'event_appA') { 
+          damageAmount = parseInt(actionValue) || 0; 
+          baseLogMsg = `カードゲームの結果、${damageAmount}のダメージを与えた！`; 
+        } else if (type === 'choice_firework') {
+          if (id_suffix === 1) { if (actionValue === 'yes') newStatus = 'monkey'; else healAmount = 10; }
+          else if (id_suffix === 2) { if (actionValue === 'yes') baseLogMsg = `ひろろは喜んだ！`; else healAmount = 10; }
+          else if (id_suffix === 3) { if (actionValue === 'yes') newStatus = 'cursed'; else healAmount = 20; }
+          else if (id_suffix === 4) { if (actionValue === 'yes') newStatus = 'nishinari'; else healAmount = 20; }
+          else if (id_suffix === 5) { if (actionValue === 'yes') newStatus = 'poison'; else healAmount = 20; }
+          else if (id_suffix === 6) { if (actionValue === 'yes') newStatus = 'paralysis'; else healAmount = 9999; }
+          else if (id_suffix === 7) { if (actionValue === 'no') newStatus = 'paralysis'; else healAmount = 9999; }
+          else if (id_suffix === 8) { if (actionValue === 'yes') baseLogMsg = `ひろろは変顔をした！`; else healAmount = 9999; }
+        } else if (type === 'get_item') {
+          baseLogMsg = `『${ITEM_DEF[drawnItem.itemId].name}』を獲得した！`;
+        }
+
+        const result = applyDamageAndHealLogic(damageAmount, healAmount, false, baseLogMsg);
+
+        let summaryText = ``;
+        if (result.breakdown.length > 0 && type !== 'get_item') {
+          summaryText += `【 計算の内訳 】\n` + result.breakdown.join('\n') + `\n------------------\n`;
+        }
+        
+        if (result.netChange < 0) {
+          summaryText += `【 合計 ${Math.abs(result.netChange)} のダメージを与えた！ 】`;
+        } else if (result.netChange > 0) {
+          if (result.netChange >= 9999) summaryText += `【 敵のHPが全回復してしまった... 】`;
+          else summaryText += `【 敵のHPが ${result.netChange} 回復した... 】`;
+        } else {
+          if (['damage', 'damage_box', 'special_likes', 'special_likes_reduce'].includes(type) || (type==='event_boxG'&&actionValue==='fail') || type==='event_appA') summaryText += `【 ダメージを与えられなかった... 】`;
+          else summaryText += `【 変化はなかった... 】`;
+        }
+        if (type === 'get_item' || (type === 'choice_firework' && result.breakdown.length === 0)) summaryText = baseLogMsg;
+
+        const summaryData = {
+          isNoriko: false, netChange: result.netChange, effects: result.effects,
+          newStatus: newStatus || (type === 'choice_firework' && actionValue === 'yes' ? newStatus : null),
+          itemId: type === 'get_item' ? drawnItem.itemId : null,
+          text: summaryText, logMsg: result.logMsg
+        };
+
+        let hasChange = result.breakdown.length > 1; 
+        if (type === 'get_item' || type === 'event_appA') hasChange = true;
+        if (hasChange) setActionSummary(summaryData); else handleActionStep2(summaryData);
+      };
+
+      const handleActionStep2 = (directSummary = null) => {
+        if (isProcessingQueue) return;
+        const payload = directSummary || actionSummary;
+        if (!payload) return;
+
+        setShowScroll(false);
+        
+        let nextHp = payload.isNoriko 
+          ? Math.max(0, norikoHp + payload.netChange) 
+          : Math.min(currentMonster.maxHp + monsterMaxHpModifier, Math.max(0, hp + payload.netChange));
+        
+        payload.nextHp = nextHp;
+
+        const queue = [];
+        if (payload.effects && payload.effects.length > 0) payload.effects.forEach(eff => queue.push(eff));
+        if (payload.netChange < 0) queue.push({ type: 'number', val: Math.abs(payload.netChange), isDamage: true });
+        else if (payload.netChange > 0) queue.push({ type: 'number', val: payload.netChange, isDamage: false });
+        queue.push({ type: 'apply_hp', newHp: nextHp });
+
+        executeQueue(queue, payload);
+      };
+
+      const executeQueue = async (queue, payload) => {
+        setIsProcessingQueue(true);
+
+        for (const item of queue) {
+          if (item.type === 'text') {
+            setTextEffect({ text: item.text, style: item.style });
+            await new Promise(r => setTimeout(r, 1500));
+            setTextEffect(null);
+            await new Promise(r => setTimeout(r, 200)); 
+          } else if (item.type === 'number') {
+            if (item.isDamage) triggerDamageFlash();
+            setPopupEffect({ val: item.val, type: item.isDamage ? 'damage' : 'heal', key: Math.random() });
+            await new Promise(r => setTimeout(r, 1200));
+          } else if (item.type === 'apply_hp') {
+            if (payload.isNoriko) setNorikoHp(item.newHp);
+            else setHp(item.newHp);
+          }
+        }
+
+        if (payload.isNoriko) {
+          if (payload.logMsg) addLog(payload.logMsg);
+          if (payload.nextHp === 0) {
+            setIsNorikoActive(false); addLog("のりこちゃんを倒した！\n猿人王が再び立ちはだかる！");
+          }
+        } else {
+          if (payload.itemId) setInventory(prev => [...prev, payload.itemId]);
+          if (payload.logMsg) addLog(payload.logMsg);
+          updateStatuses(payload.newStatus);
+
+          if (monsterIndex === 5 && !hasSummonedNoriko && payload.nextHp <= 50 && payload.nextHp > 0) {
+            setIsNorikoActive(true); setHasSummonedNoriko(true); setNorikoHp(5);
+            addLog("猿人王は『リアコの召喚』を発動した！\nのりこちゃんが現れた！");
+            setTimeout(() => setShowNorikoIntro(true), 1500); 
+          }
+          if (payload.nextHp === 0) handleDefeat();
+        }
+
+        setChoiceResult(null); setDrawnItem(null); setActionSummary(null);
+        setIsProcessingQueue(false);
+      };
+
+      const applyDamageAndHealLogic = (baseDmg, baseHeal, isGigafile, baseMsg) => {
+        let dmg = baseDmg; let heal = baseHeal; let breakdown = []; let effects = []; let logMsgs = [];
+        if (baseMsg) logMsgs.push(baseMsg);
+
+        if (dmg > 0 && !isGigafile) {
+          breakdown.push(`基礎ダメージ: ${dmg}`);
+          if (inventory.includes('companion_kuma') && Math.random() < 0.3) {
+            dmg *= 2; breakdown.push(`クマの猛撃(x2): ${dmg}`);
+            effects.push({ type: 'text', style: 'kuma', text: 'クマの猛撃！\nダメージ2倍！' });
+            logMsgs.push(`(クマの猛撃！ダメージ2倍)`);
+          }
+          if (hasStatus('monkey')) {
+            dmg *= 2; breakdown.push(`モンキーランス(x2): ${dmg}`);
+            logMsgs.push(`(モンキーランス効果でダメージ2倍！)`);
+          }
+          if (monsterIndex === 6 && shimaTurns > 0 && Math.random() < 0.5) {
+            dmg = Math.ceil(dmg / 2); breakdown.push(`長寿の知恵(半減): ${dmg}`);
+            effects.push({ type: 'text', style: 'shima', text: '✨ 長寿の知恵 発動！ ✨\nダメージ半減！' });
+            logMsgs.push(`(長寿の知恵が発動！ダメージが半減された！)`);
+          }
+          if (hasStatus('ring') && dmg <= 10) {
+            dmg += 10; breakdown.push(`結婚指輪(+10): ${dmg}`);
+            logMsgs.push(`(結婚指輪の誓い！+10ダメージ)`);
+          }
+        } else if (dmg > 0 && isGigafile) {
+          breakdown.push(`ギガファイル(固定): ${dmg}`);
+        }
+
+        if (heal > 0) {
+          breakdown.push(`基礎回復量: ${heal >= 9999 ? '全回復' : heal}`);
+          
+          if (heal >= 9999 && inventory.includes('fake_family')) {
+            heal = 10;
+            breakdown.push(`偽りのファミリー: 10回復に変換`);
+            effects.push({ type: 'text', style: 'shima', text: '偽りのファミリー！\n全回復を阻止！' });
+            logMsgs.push(`(偽りのファミリーの効果で全回復が10回復になった！)`);
+          }
+
+          if (hasStatus('nishinari') || hasStatus('paralysis')) {
+            heal = 0; breakdown.push(`状態異常(回復無効): 0`);
+            logMsgs.push(`(しかし回復できない状態だ！)`);
+          }
+          if (heal > 0 && inventory.includes('companion_wakasa')) {
+            breakdown.push(`わかさの追撃: 5ダメージ`);
+            effects.push({ type: 'text', style: 'wakasa', text: 'わかさの追撃！\n5ダメージ！' });
+            dmg += 5;
+            logMsgs.push(`(わかさの追撃！敵に5ダメージ！)`);
+          }
+        }
+
+        let dotDmg = 0;
+        if (hasStatus('cursed')) { dotDmg += 5; breakdown.push(`呪いの追加ダメージ: +5`); }
+        if (hasStatus('poison')) { dotDmg += 5; breakdown.push(`毒の追加ダメージ: +5`); }
+        if (hasStatus('modoku')) { dotDmg += 5; breakdown.push(`猛毒の追加ダメージ: +5`); }
+        dmg += dotDmg;
+
+        let netChange = heal - dmg; 
+        return { netChange, breakdown, effects, logMsg: logMsgs.join('\n') };
+      };
+
+      const updateStatuses = (newStatusId) => {
+        let nextStatuses = statuses.map(s => ({ ...s, turns: s.turns - 1 })).filter(s => s.turns > 0);
+        if (newStatusId) {
+          nextStatuses = nextStatuses.filter(s => s.id !== newStatusId);
+          nextStatuses.push({ id: newStatusId, turns: 5 });
+          addLog(`${STATUS_DEF[newStatusId].name}が付与された！(5T)`);
+        }
+        setStatuses(nextStatuses);
+        if (monsterIndex === 6 && shimaTurns > 0) {
+          setShimaTurns(prev => prev - 1);
+          if (shimaTurns - 1 === 0) addLog("特殊状態『長寿の知恵』の効果が切れた。");
+        }
+      };
+
+      const handleChoice = (actionValue) => {
+        let resultText = ''; const sid = drawnItem.id_suffix;
+        if (sid === 1) resultText = actionValue === 'yes' ? '装備品『モンキーランス』を獲得した！\n（次のターンから5ターンの間、与えるダメージが2倍になる）' : '敵のHPが10回復した...';
+        else if (sid === 2) resultText = actionValue === 'yes' ? 'ひろろは喜んだ！' : '敵のHPが10回復した...';
+        else if (sid === 3) resultText = actionValue === 'yes' ? '装備品『呪いのテディベア』を獲得した！\n（次のターンから5ターンの間、毎ターン5ダメージを与える）' : '敵のHPが20回復した...';
+        else if (sid === 4) resultText = actionValue === 'yes' ? '装備品『西成の紋章』を獲得した！\n（次のターンから5ターンの間、敵は回復できない）' : '敵のHPが20回復した...';
+        else if (sid === 5) resultText = actionValue === 'yes' ? '敵を毒状態にした！\n（次のターンから5ターンの間、毎ターン5ダメージを与える）' : '敵のHPが20回復した...';
+        else if (sid === 6) resultText = actionValue === 'yes' ? '敵を麻痺状態にした！\n（次のターンから5ターンの間、敵は回復できない）' : '敵のHPが全回復した...';
+        else if (sid === 7) resultText = actionValue === 'no' ? '敵を麻痺状態にした！\n（次のターンから5ターンの間、敵は回復できない）' : '敵のHPが全回復した...';
+        else if (sid === 8) resultText = actionValue === 'yes' ? 'ひろろは変顔をした！' : '敵のHPが全回復した...';
+        setChoiceResult({ action: actionValue, text: resultText });
+      };
+
+      const handleUseItem = (index) => {
+        if (isProcessingQueue) return;
+        const itemId = inventory[index]; const item = ITEM_DEF[itemId];
+        let healAmount = 0; let damageAmount = 0; let isGigafile = false; let logMsg = `『${item.name}』を使った！\n`;
+        let isGiveShima = false;
+
+        if (item.type === 'heal') { healAmount = item.value; logMsg += `敵のHPが${healAmount === 9999 ? '全' : healAmount}回復した...`; }
+        else if (item.type === 'damage') { damageAmount = item.value; logMsg += `敵に${damageAmount}のダメージ！`; }
+        else if (item.type === 'cure') { setStatuses(prev => prev.filter(s => STATUS_DEF[s.id].isEquip)); logMsg += `状態異常が回復した！`; }
+        else if (item.type === 'none') { 
+          if (itemId === 'shima_cloth' && monsterIndex === 6) {
+            isGiveShima = true; setHasGivenShimaCloth(true); setMonsterMaxHpModifier(100); healAmount = 100;
+            logMsg = `『シマシマの服』を渡した！\n`;
+          } else { logMsg += `しかし、ここでは使えないようだ。`; }
+        }
+        else if (item.type === 'companion') { logMsg += `${item.name}は常に力を貸してくれている！`; }
+        else if (item.type === 'takidashi') { const t = Math.floor(Math.random() * 7) + 2; setStatuses(prev => [...prev.filter(s => s.id !== 'modoku'), { id: 'modoku', turns: t }]); logMsg += `敵を猛毒状態にした！(${t}ターン)`; }
+        else if (item.type === 'ring') {
+          const companions = inventory.filter(id => ITEM_DEF[id].type === 'companion');
+          if (companions.length === 0) logMsg += `しかし仲間がいなかった！効果がない！`;
+          else { setShowRingModal(true); setSelectedItemIndex(null); return; }
+        } else if (item.type === 'gigafile') { damageAmount = item.value; isGigafile = true; logMsg += `証拠のギガファイル！${damageAmount}の固定ダメージ！`; }
+
+        const result = applyDamageAndHealLogic(damageAmount, healAmount, isGigafile, logMsg);
+        
+        if (isGiveShima) {
+          result.effects.push({ type: 'text', style: 'shima', text: 'HPの上限を100増やし、\n増えた分回復する！' });
+          result.netChange = 100; result.logMsg = "シマシマの服を渡した！敵のHP上限とHPが100回復した！";
+        }
+
+        if (['heal', 'damage', 'cure', 'takidashi', 'gigafile'].includes(item.type) || isGiveShima) {
+          setInventory(prev => prev.filter((_, i) => i !== index));
+          if (inventory.length === 1) setShowInventory(false);
+        }
+        setSelectedItemIndex(null); setShowInventory(false);
+
+        let nextHp = Math.min(currentMonster.maxHp + (isGiveShima ? 100 : monsterMaxHpModifier), Math.max(0, hp + result.netChange));
+        
+        const queue = [];
+        if (result.effects.length > 0) result.effects.forEach(eff => queue.push(eff));
+        if (result.netChange < 0) queue.push({ type: 'number', val: Math.abs(result.netChange), isDamage: true });
+        else if (result.netChange > 0) queue.push({ type: 'number', val: result.netChange, isDamage: false });
+        queue.push({ type: 'apply_hp', newHp: nextHp });
+
+        executeQueue(queue, { isNoriko: false, netChange: result.netChange, nextHp, logMsg: result.logMsg, newStatus: null });
+      };
+
+      const executeRing = (companionId) => {
+        setShowRingModal(false); setShowInventory(false);
+        let text = "";
+        if (companionId === 'companion_wakasa') text = "わかさ\n「ごめん、私はここまでみたい…。\nひろろのこと、絶対助けてあげてね！」";
+        else if (companionId === 'companion_kuma') text = "クマ\n「グルル…\n（自分の筋肉を信じて進め…さらばだ！）」";
+        else if (companionId === 'companion_kirin') text = "キリン\n「……\n（何も言わずに静かに去っていった）」";
+        setFarewellData({ companionId, text });
+      };
+
+      const handleFarewellNext = () => {
+        if (!farewellData) return;
+        const { companionId } = farewellData;
+        setInventory(prev => {
+            const next = [...prev];
+            const ringIdx = next.indexOf('ring'); if (ringIdx !== -1) next.splice(ringIdx, 1);
+            const compIdx = next.indexOf(companionId); if (compIdx !== -1) next.splice(compIdx, 1);
+            if (companionId === 'companion_kirin') next.push('fake_family');
+            return next;
+        });
+        setStatuses(prev => [...prev.filter(s => s.id !== 'ring'), { id: 'ring', turns: 5 }]);
+
+        if (companionId === 'companion_kirin') {
+          addLog(`${ITEM_DEF[companionId].name}とお別れした...\n道具『偽りのファミリー』を獲得！`);
+        } else {
+          addLog(`${ITEM_DEF[companionId].name}とお別れした...\n次のターンから5ターンの間、追加ダメージ付与！`);
+        }
+        setFarewellData(null);
+      };
+
+      const handleDefeat = () => {
+        setIsDefeated(true);
+        addLog(`【 ${currentMonster.name} を倒した！ 】`);
+
+        setTimeout(() => {
+          if (monsterIndex === 0) {
+            setPostDefeatState({ type: 'vaccine', text: '猿ゴブリンを討伐した！\n道具「ワクチン」を獲得した。' });
+            setInventory(prev => [...prev, 'vaccine']);
+          } else if (monsterIndex === 1) {
+            setPostDefeatState({ type: 'choice_wakasa', text: '爆走板チャリ女を討伐した！\nワクチンを使用しますか？' });
+          } else if (monsterIndex === 2) {
+            setPostDefeatState({ type: 'gigafile', text: 'ラマザルを討伐した！\n道具「証拠のギガファイル」を獲得した。' });
+            setInventory(prev => [...prev, 'gigafile']);
+          } else if (monsterIndex === 3) {
+            setPostDefeatState({ type: 'vaccine', text: '猿ゴーレムを討伐した！\n道具「ワクチン」を獲得した。' });
+            setInventory(prev => [...prev, 'vaccine']);
+          } else if (monsterIndex === 4) {
+            setPostDefeatState({ type: 'choice_kuma', text: '脳筋クマを討伐した！\nワクチンを使用しますか？' });
+          } else if (monsterIndex === 5) {
+            setPostDefeatState({ type: 'king_defeat', text: '猿人王を討伐した！\nワクチンを使用し、ひろろが正常に戻った。' });
+          } else if (monsterIndex === 6) {
+            if (hasGivenShimaCloth) {
+              setPostDefeatState({ type: 'maakun_final_story_1', text: "まーくん\n「まさか貴様らに負けるとは、、、皆には悪いことをしたな、さっきくれたシマシマの服のポケットに宝箱のカギが入っている、すぐそこに宝箱があるから開けて持ち帰るとよい、長く生きろよ、みんな」\n\nまーくんは死んだ。" });
+            } else {
+              setPostDefeatState({ type: 'ending_story_1', text: "激闘の末、まーくんは静かに倒れ伏した。\n彼の中の狂気は消え、ダンジョンを覆っていた邪悪な気配も霧散していく…" });
+            }
+          }
+        }, 2000);
+      };
+
+      const handlePostDefeatChoice = (choice) => {
+        if (postDefeatState.type === 'choice_wakasa') {
+          if (choice === 'yes') {
+            setInventory(prev => { const next = [...prev]; const vIdx = next.indexOf('vaccine'); if (vIdx !== -1) next.splice(vIdx, 1); return [...next, 'companion_wakasa']; });
+            setPostDefeatState({ type: 'companion_joined', nextIdx: monsterIndex + 1, text: '『 わかさ 』が仲間になった！\n\n【 能力 】\n敵が回復する際、5ダメージを与える！' }); return;
+          } else if (choice === 'no') {
+            setPostDefeatState(prev => ({ ...prev, text: '見捨てる訳には行かない。\nワクチンを使用しますか？', key: Date.now() })); return;
+          }
+        } else if (postDefeatState.type === 'choice_kuma') {
+          if (choice === 'yes') {
+            setInventory(prev => { const next = [...prev]; const vIdx = next.indexOf('vaccine'); if (vIdx !== -1) next.splice(vIdx, 1); return [...next, 'companion_kuma']; });
+            setPostDefeatState({ type: 'companion_joined', nextIdx: monsterIndex + 1, text: '『 クマ 』が仲間になった！\n\n【 能力 】\n敵にダメージを与える際、\n30％の確率でダメージを2倍にする！' }); return;
+          } else if (choice === 'no') {
+            setPostDefeatState(prev => ({ ...prev, text: '見捨てる訳には行かない。\nワクチンを使用しますか？', key: Date.now() })); return;
+          }
+        } else if (postDefeatState.type === 'king_defeat') {
+          setInventory(prev => { const next = [...prev]; const vIdx = next.indexOf('vaccine'); if (vIdx !== -1) next.splice(vIdx, 1); return next; });
+          setPostDefeatState({ type: 'king_story_1', text: "ひろろ\n「あれ…？みんな？てかここはどこ」" }); return;
+        } else if (postDefeatState.type === 'king_story_1') {
+          setPostDefeatState({ type: 'king_story_2', text: "わかさ\n「覚えていないんだね…急に豹変してみんなを傷つけたんだよ。ｳﾌｩﾝ///」" }); return;
+        } else if (postDefeatState.type === 'king_story_2') {
+          setPostDefeatState({ type: 'king_story_3', text: "クマ\n「とりあえずダンジョンを抜けよう！あの扉を開ければ出れるのかな」" }); return;
+        } else if (postDefeatState.type === 'king_story_3') {
+          setPostDefeatState(null); setShowDoorEffect(true); return;
+        } else if (postDefeatState.type === 'maakun_story_1') {
+          setPostDefeatState({ type: 'maakun_story_2', text: "わかさ\n「んっ///」" }); return;
+        } else if (postDefeatState.type === 'maakun_story_2') {
+          setPostDefeatState({ type: 'maakun_story_3', text: "まーくん\n「見つかってしまったか。バレてしまったのなら教えてやろう。みんなも知ってると思うがワシは寿命でもう時期死ぬところだった。でも死ぬのは怖くて死を偽装し、不老不死になる薬をこのダンジョンで開発していたんじゃ、そして試作品が完成し、」" }); return;
+        } else if (postDefeatState.type === 'maakun_story_3') {
+          setPostDefeatState({ type: 'maakun_story_4', text: "まーくん\n「この村で1番頭の悪くて騙しやすいひろろに投与した。だが寿命を伸ばすどころか豹変し理性を失ってしまった。それでも研究を辞める訳には行かない。」" }); return;
+        } else if (postDefeatState.type === 'maakun_story_4') {
+          setPostDefeatState({ type: 'maakun_story_5', text: "まーくん\n「そしてやっとの思いで完成したんじゃ！見ろ！この元気な体を！体力、パワー、スピード全て常人の人間以上じゃ！真実を知ったお前らに帰る場所などない！ここで死ね！」" }); return;
+        } else if (postDefeatState.type === 'maakun_story_5') {
+          setPostDefeatState(null); moveToNextMonster(6); return;
+        } 
+        else if (postDefeatState.type === 'maakun_final_story_1') {
+          setPostDefeatState({ type: 'choice_treasure', text: "宝箱を開けますか？" }); return;
+        } else if (postDefeatState.type === 'choice_treasure') {
+          if (choice === 'yes') { setPostDefeatState(null); setShowTreasureEffect(true); return; }
+          else if (choice === 'no') { setPostDefeatState({ type: 'ending_story_1', text: "激闘の末、まーくんは静かに倒れ伏した。\n彼の中の狂気は消え、ダンジョンを覆っていた邪悪な気配も霧散していく…" }); return; }
+        } else if (postDefeatState.type === 'treasure_opened') {
+          setPostDefeatState({ type: 'ending_story_1', text: "激闘の末、まーくんは静かに倒れ伏した。\n彼の中の狂気は消え、ダンジョンを覆っていた邪悪な気配も霧散していく…" }); return;
+        } else if (postDefeatState.type === 'ending_story_1') {
+          setPostDefeatState({ type: 'ending_story_2', text: "村に戻ると、呪縛から解き放たれたひろろの姿があった。\nまだ記憶は曖昧なようだが、その顔にはかつての優しい笑顔が戻っていた。" }); return;
+        } else if (postDefeatState.type === 'ending_story_2') {
+          setPostDefeatState({ type: 'ending_story_3', text: "犠牲になった仲間たちの想いを胸に、村は再び歩み始める。\n活気と笑顔を取り戻した村に、ついに真の平和が訪れたのだった——。" }); return;
+        } else if (postDefeatState.type === 'ending_story_3') {
+          setPostDefeatState(null); setGameClear(true); return;
+        }
+        
+        const nextIdx = monsterIndex + 1;
+        setPostDefeatState(null); moveToNextMonster(nextIdx);
+      };
+
+      const moveToNextMonster = (nextIndex) => {
+        setMonsterIndex(nextIndex); setHp(MONSTERS[nextIndex].maxHp); setIsDefeated(false); setTapCount(0);
+        setMonsterMaxHpModifier(0); 
+        
+        if (nextIndex === 5) {
+          const newK = []; for(let i=0; i<5; i++) newK.push({ type: 'damage_box', text: '毒を盛って30ダメージ与えた。箱Kを開ける。', damage: 30, box: 'K', id: Math.random().toString(36).substring(7) });
+          setGachaPool(prev => shuffleArray([...prev, ...newK]));
+        }
+        if (nextIndex === 6) {
+          setIsWarning(true); addLog("⚠️ 世界を裏で操る真の黒幕、シマシマハゲが現れた！！");
+          setTimeout(() => { setIsWarning(false); setShowShimaIntro(true); }, 3500);
+          setShimaTurns(10); addLog("【特殊状態】シマシマハゲは10ターンの間『長寿の知恵』を得た！（被ダメ時50%の確率で半減）");
+        }
+        triggerAppearance(nextIndex);
+      };
+
+      const introTexts = [
+        "決して裕福ではないが、みんなが仲良しで助け合いを大切にしている村があると聞き、僕はこの村に興味を持ち行くことにした。",
+        "しかし、着いてみると、聞いていた話とは違い、畑は荒れ、活気がなく想像とは全く別物だった、、",
+        "とりあえず、村の人に話を聞いてみた、そしたら驚きの事実が明らかに",
+        "「この村にはまるで家族のように仲のいい、若者ひろろと御長寿まーくんがいた。御長寿ということもあり寿命でまーくんは死んでしまった。」",
+        "「それからひろろはおかしくなり、まるで何かに操られてるかのように、村を荒らし、人を襲うようになった、あんなに優しい若者だったのになぁ、、」",
+        "「いま、ひろろはダンジョンの洞窟の中に住み着いている、どうかひろろを助けてくれないだろうか…」",
+        "「カス！それでも人間か！」",
+        "「ありがとう。1人では心細いだろう、それでは何の役にも立たないかもしれないがキリンを一緒に連れて行くと良い」"
+      ];
+
+      useEffect(() => {
+        if (hasSeenIntro || introPhase >= introTexts.length) return;
+        const text = introTexts[introPhase]; setIsIntroTyping(true); setDisplayedIntroText(''); let i = 0;
+        const t = setInterval(() => { setDisplayedIntroText(text.substring(0, ++i)); if (i >= text.length) { clearInterval(t); setIsIntroTyping(false); } }, 60);
+        return () => clearInterval(t);
+      }, [introPhase, hasSeenIntro]);
+
+      const handleNextIntro = () => {
+        if (introPhase < 5) setIntroPhase(prev => prev + 1);
+        else if (introPhase === 7) setIntroPhase(8);
+        else if (introPhase === 8) { setInventory(['companion_kirin']); setHasSeenIntro(true); triggerAppearance(0); }
+      };
+
+      const handleIntroContainerClick = () => {
+        if (isIntroTyping) { setDisplayedIntroText(introTexts[introPhase]); setIsIntroTyping(false); return; }
+        if (introPhase !== 5 && introPhase !== 6 && introPhase < 8) handleNextIntro();
+      };
+
+      if (!hasSeenIntro) {
+        if (introPhase === 8) {
+          return (
+            <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center font-dot relative p-4">
+              <style>{`@import url('https://fonts.googleapis.com/css2?family=DotGothic16&display=swap'); .font-dot { font-family: 'DotGothic16', sans-serif; } .pixel-border { border: 4px solid white; border-radius: 8px; background-color: rgba(0,0,0,0.8); box-shadow: 4px 4px 0px #000; }`}</style>
+              <div className="pixel-border bg-gray-900 p-8 max-w-lg text-center flex flex-col items-center shadow-[0_0_30px_rgba(255,255,255,0.2)]">
+                <h2 className="text-yellow-300 text-2xl md:text-3xl font-bold mb-6 animate-bounce">仲間が加入した！</h2>
+                <p className="text-white mb-8 whitespace-pre-wrap leading-loose font-bold text-xl md:text-2xl text-yellow-100">『 キリン 』が仲間になった！<br/><br/>【 能力 】<br/>効果は、何も無い。</p>
+                <button onClick={handleNextIntro} className="pixel-border !bg-yellow-600 hover:!bg-yellow-500 text-white px-10 py-4 text-lg font-bold">冒険へ出発する</button>
+              </div>
+            </div>
+          );
+        }
+
+        return (
+          <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center font-dot relative p-4" onClick={handleIntroContainerClick}>
+            <style>{`@import url('https://fonts.googleapis.com/css2?family=DotGothic16&display=swap'); .font-dot { font-family: 'DotGothic16', sans-serif; } .pixel-border { border: 4px solid white; border-radius: 8px; background-color: rgba(0,0,0,0.8); box-shadow: 4px 4px 0px #000; }`}</style>
+            <div className="pixel-border bg-gray-900 p-6 md:p-10 w-full max-w-2xl min-h-[200px] flex flex-col justify-between cursor-pointer">
+              <p className="text-lg md:text-xl leading-loose font-bold whitespace-pre-wrap">
+                {displayedIntroText}<span className={isIntroTyping ? "animate-pulse text-gray-400" : "hidden"}>|</span>
+              </p>
+              {(introPhase === 5 || introPhase === 6) && !isIntroTyping && (
+                <div className="flex flex-col md:flex-row gap-4 mt-8 justify-center">
+                  <button onClick={(e) => { e.stopPropagation(); setIntroPhase(7); }} className="pixel-border !bg-blue-800 hover:!bg-blue-600 text-white px-6 py-3 font-bold">ひろろを助けに行く</button>
+                  <button onClick={(e) => { e.stopPropagation(); setIntroPhase(6); }} className="pixel-border !bg-gray-700 hover:!bg-gray-600 text-white px-6 py-3 font-bold">見捨てる</button>
+                </div>
+              )}
+              {introPhase !== 5 && introPhase !== 6 && !isIntroTyping && <div className="text-right mt-4 text-gray-400 animate-pulse">▼ つぎへ</div>}
+            </div>
+          </div>
+        );
+      }
+
+      if (gameClear) {
+        return (
+          <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center font-dot relative">
+            <h1 className="text-3xl md:text-5xl text-yellow-400 mb-8 animate-bounce">GAME CLEAR!!</h1>
+            <p className="text-lg md:text-2xl text-center">すべてのモンスターを討伐し、<br/>ダンジョンに真の平和が訪れた！</p>
+            <button onClick={executeReset} className="mt-8 pixel-border !bg-blue-800 hover:!bg-blue-600 text-white px-6 py-2 md:px-8 md:py-3 text-sm md:text-base font-bold">最初から遊ぶ</button>
+          </div>
+        );
+      }
+
+      return (
+        <div className="min-h-screen bg-[#111] text-white font-dot relative overflow-hidden flex flex-col">
+          <style>{`
+            @import url('https://fonts.googleapis.com/css2?family=DotGothic16&display=swap');
+            .font-dot { font-family: 'DotGothic16', sans-serif; }
+            .bg-dungeon { background-image: url('public/images/haikei.png'); background-size: cover; background-position: center; background-color: #2d2319; }
+            @keyframes flashRed { 0%, 100% { background-color: rgba(255,0,0,0); } 50% { background-color: rgba(255,0,0,0.5); } }
+            .flash-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 100; animation: flashRed 0.3s ease-out; }
+            @keyframes warningFlash { 0%, 100% { background-color: rgba(255,0,0,0); } 50% { background-color: rgba(255,0,0,0.4); } }
+            .warning-active { position: absolute; inset: 0; pointer-events: none; z-index: 40; animation: warningFlash 0.5s infinite; }
+            @keyframes encounterBanner { 0%, 100% { transform: scaleY(0); opacity: 0; } 10%, 90% { transform: scaleY(1); opacity: 1; } }
+            .animate-encounter { transform-origin: center; animation: encounterBanner 2.5s ease-in-out forwards; }
+            .text-shadow-glow { text-shadow: 0 0 10px rgba(255,255,255,0.8), 0 0 20px rgba(255,255,255,0.5); }
+            @keyframes unroll { 0% { transform: scaleX(0.05) scaleY(0); opacity: 0; } 40% { transform: scaleX(0.05) scaleY(1); opacity: 1; } 100% { transform: scaleX(1) scaleY(1); opacity: 1; } }
+            .scroll-open { transform-origin: center; animation: unroll 1.5s ease-out forwards; }
+            .old-paper { background-color: #d4b581; background-image: radial-gradient(circle at 15% 25%, rgba(101,56,17,0.2) 0%, transparent 40%), radial-gradient(circle at 85% 75%, rgba(101,56,17,0.3) 0%, transparent 50%), url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.8%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22 opacity=%220.15%22/%3E%3C/svg%3E'); box-shadow: 0 20px 50px rgba(0,0,0,0.9), inset 0 0 80px rgba(70,30,5,0.8), inset 0 0 15px rgba(0,0,0,0.7); border-top: 1px solid rgba(255,255,255,0.1); border-bottom: 2px solid rgba(0,0,0,0.5); }
+            @keyframes bossFloat { 0%, 100% { transform: translateY(0px) scale(1); } 50% { transform: translateY(-15px) scale(1.05); } }
+            .boss-anim { animation: bossFloat 4s ease-in-out infinite; }
+            @keyframes enemyFloat { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-5px); } }
+            .enemy-anim { animation: enemyFloat 2s ease-in-out infinite; }
+            @keyframes defeatFade { 0% { opacity: 1; filter: brightness(1) sepia(0) hue-rotate(0deg); } 30% { opacity: 1; filter: brightness(2) sepia(1) hue-rotate(300deg); } 100% { opacity: 0; transform: scale(0.8) translateY(20px); filter: brightness(0); } }
+            .defeat-anim { animation: defeatFade 2s ease-out forwards; }
+            @keyframes popupFloat { 0% { opacity: 0; transform: translate(-50%, 20px) scale(0.8); } 20%, 30% { opacity: 1; transform: translate(-50%, 0px) scale(1.1); } 80% { opacity: 1; transform: translate(-50%, -10px) scale(1); } 100% { opacity: 0; transform: translate(-50%, -30px) scale(0.9); } }
+            .effect-popup { position: absolute; top: 30%; left: 50%; animation: popupFloat 2s ease-out forwards; z-index: 55; pointer-events: none; }
+            @keyframes damagePopupAnim { 0% { opacity: 0; transform: translate(-50%, 0) scale(0.5); } 15% { opacity: 1; transform: translate(-50%, -20px) scale(1.2); } 30%, 80% { opacity: 1; transform: translate(-50%, -10px) scale(1); } 100% { opacity: 0; transform: translate(-50%, -50px) scale(0.8); } }
+            .damage-popup-container { position: absolute; top: 35%; left: 50%; pointer-events: none; z-index: 150; animation: damagePopupAnim 1.5s ease-out forwards; }
+            .damage-number { font-size: 5rem; font-weight: 900; color: #ff3333; line-height: 1; text-shadow: 3px 3px 0 #fff, -3px -3px 0 #fff, 3px -3px 0 #fff, -3px 3px 0 #fff, 0 0 15px rgba(255,0,0,0.8); }
+            .heal-number { font-size: 5rem; font-weight: 900; color: #3b82f6; line-height: 1; text-shadow: 3px 3px 0 #fff, -3px -3px 0 #fff, 3px -3px 0 #fff, -3px 3px 0 #fff, 0 0 15px rgba(59,130,246,0.8); }
+            @media (min-width: 768px) { .damage-number, .heal-number { font-size: 7rem; } }
+            @keyframes doorOpenLeft { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
+            @keyframes doorOpenRight { 0% { transform: translateX(0); } 100% { transform: translateX(100%); } }
+            @keyframes doorLight { 0% { opacity: 0; box-shadow: 0 0 0px #fff; width: 0px; } 20% { opacity: 1; box-shadow: 0 0 20px #fff; width: 4px; } 100% { opacity: 1; box-shadow: 0 0 100px #fff; width: 100vw; } }
+            .door-left { position: absolute; left: 0; top: 0; bottom: 0; width: 50%; background-image: linear-gradient(to right, #222, #111); border-right: 4px solid #000; animation: doorOpenLeft 2.5s ease-in-out forwards; animation-delay: 1s; }
+            .door-right { position: absolute; right: 0; top: 0; bottom: 0; width: 50%; background-image: linear-gradient(to left, #222, #111); border-left: 4px solid #000; animation: doorOpenRight 2.5s ease-in-out forwards; animation-delay: 1s; }
+            .door-light { position: absolute; left: 50%; top: 0; bottom: 0; transform: translateX(-50%); background: #fff; animation: doorLight 2.5s ease-in forwards; animation-delay: 1s; }
+            @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+            .animate-fadeIn { animation: fadeIn 0.5s ease-out; }
+            @keyframes treasureShake { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(-10deg); } 75% { transform: rotate(10deg); } }
+            @keyframes treasureOpen { 0% { transform: scale(1); filter: brightness(1); } 100% { transform: scale(2); filter: brightness(2) drop-shadow(0 0 20px yellow); opacity: 0; } }
+            .treasure-box { font-size: 6rem; animation: treasureShake 0.5s infinite; transition: all 0.5s; cursor: default; user-select: none; }
+            .treasure-box.opening { animation: treasureOpen 1s forwards; }
+            .pixel-border { border: 4px solid white; border-radius: 8px; background-color: rgba(0,0,0,0.8); box-shadow: 4px 4px 0px #000; }
+          `}</style>
+
+          {flashKey > 0 && <div key={flashKey} className="flash-overlay"></div>}
+
+          {showDoorEffect && (
+            <div className="absolute inset-0 z-[140] bg-black overflow-hidden flex justify-center">
+              <div className="door-light"></div>
+              <div className="door-left"></div>
+              <div className="door-right"></div>
+              <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+                <p className="text-white font-bold text-3xl md:text-5xl animate-bounce drop-shadow-[0_0_10px_rgba(255,255,255,1)] tracking-widest">ゴゴゴゴゴ……</p>
+              </div>
+            </div>
+          )}
+
+          {showTreasureEffect && (
+            <div className="absolute inset-0 z-[140] bg-black/90 flex flex-col items-center justify-center font-dot">
+              <div className={`treasure-box ${isOpeningTreasure ? 'opening' : ''}`}>
+                {isOpeningTreasure ? '✨' : '🎁'}
+              </div>
+              {!isOpeningTreasure && <p className="text-white mt-8 font-bold text-xl animate-pulse">カチャッ...</p>}
+            </div>
+          )}
+
+          {textEffect && (
+            <div className={`effect-popup pixel-border px-6 py-4 text-center text-white font-bold text-lg md:text-xl whitespace-pre-wrap ${
+              textEffect.style === 'shima' ? 'bg-purple-800/90 shadow-[0_0_20px_rgba(168,85,247,0.8)]' :
+              textEffect.style === 'wakasa' ? 'bg-pink-800/90 shadow-[0_0_20px_rgba(236,72,153,0.8)]' :
+              'bg-orange-800/90 shadow-[0_0_20px_rgba(251,146,60,0.8)]'
+            }`}>
+              {textEffect.text}
+            </div>
+          )}
+
+          {popupEffect && (
+            <div key={popupEffect.key} className="damage-popup-container font-dot flex flex-col items-center">
+              <span className={`italic ${popupEffect.type === 'damage' ? 'damage-number' : 'heal-number'}`}>{popupEffect.val}</span>
+            </div>
+          )}
+
+          {encounterStoryText && (
+            <div className="absolute inset-0 z-[80] flex items-center justify-center bg-black/60 p-4 font-dot" onClick={handleEncounterClick}>
+              <div className="pixel-border bg-gray-900 p-6 md:p-10 w-full max-w-2xl min-h-[150px] flex flex-col justify-between cursor-pointer shadow-[0_0_30px_rgba(255,255,255,0.2)]">
+                <p className="text-lg md:text-xl leading-loose font-bold whitespace-pre-wrap text-white">{encounterDisplayedText}<span className={isEncounterTyping ? "animate-pulse text-gray-400" : "hidden"}>|</span></p>
+                {!isEncounterTyping && <div className="text-right mt-4 text-gray-400 animate-pulse">▼ つぎへ</div>}
+              </div>
+            </div>
+          )}
+
+          {farewellData && (
+            <div className="absolute inset-0 z-[130] flex items-center justify-center bg-black/80 p-4 font-dot" onClick={handleFarewellClick}>
+              <div className="pixel-border bg-gray-900 p-6 md:p-10 w-full max-w-2xl min-h-[150px] flex flex-col justify-between cursor-pointer shadow-[0_0_30px_rgba(255,255,255,0.2)]">
+                <p className="text-lg md:text-xl leading-loose font-bold whitespace-pre-wrap text-white">{farewellDisplayedText}<span className={isFarewellTyping ? "animate-pulse text-gray-400" : "hidden"}>|</span></p>
+                {!isFarewellTyping && <div className="text-right mt-4 text-gray-400 animate-pulse">▼ つぎへ</div>}
+              </div>
+            </div>
+          )}
+
+          {postDefeatState && (
+            <div className="absolute inset-0 z-[110] bg-black/90 p-4 font-dot flex items-center justify-center" onClick={handlePostDefeatContainerClick}>
+              <div className={`pixel-border bg-gray-900 p-8 text-center flex flex-col items-center shadow-[0_0_30px_rgba(255,255,255,0.2)] ${postDefeatState.type.includes('story') || postDefeatState.type === 'treasure_opened' ? 'max-w-2xl w-full' : 'max-w-lg'}`}>
+                {postDefeatState.type === 'companion_joined' && <h2 className="text-yellow-300 text-2xl md:text-3xl font-bold mb-6 animate-bounce">仲間が加入した！</h2>}
+                <p className={`text-white mb-8 whitespace-pre-wrap leading-loose font-bold ${postDefeatState.type === 'companion_joined' || postDefeatState.type === 'treasure_opened' ? 'text-xl md:text-2xl text-yellow-100' : postDefeatState.type.includes('story') ? 'text-base md:text-xl text-left w-full' : 'text-xl'}`}>
+                  {postDefeatDisplayedText}<span className={isPostDefeatTyping ? "animate-pulse text-gray-400" : "hidden"}>|</span>
+                </p>
+
+                {!isPostDefeatTyping && postDefeatState.type.startsWith('choice_') && (
+                  <div className="flex gap-6">
+                    <button onClick={() => handlePostDefeatChoice('yes')} className="pixel-border !bg-blue-800 hover:!bg-blue-600 text-white px-8 py-3 font-bold">YES</button>
+                    <button onClick={() => handlePostDefeatChoice('no')} className="pixel-border !bg-gray-700 hover:!bg-gray-600 text-white px-8 py-3 font-bold">NO</button>
+                  </div>
+                )}
+                
+                {!isPostDefeatTyping && postDefeatState.type === 'companion_joined' && (
+                  <button onClick={() => { const nextIdx = postDefeatState.nextIdx; setPostDefeatState(null); moveToNextMonster(nextIdx); }} className="pixel-border !bg-yellow-600 hover:!bg-yellow-500 text-white px-10 py-4 text-lg font-bold">確認</button>
+                )}
+
+                {!isPostDefeatTyping && !postDefeatState.type.startsWith('choice_') && postDefeatState.type !== 'companion_joined' && (
+                  <button onClick={() => handlePostDefeatChoice('next')} className="pixel-border !bg-green-700 hover:!bg-green-600 text-white px-8 py-3 font-bold">{postDefeatState.type.includes('story') || postDefeatState.type === 'treasure_opened' ? '次へ ▼' : 'すすむ'}</button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {showRingModal && (
+            <div className="absolute inset-0 z-[120] bg-black/90 p-4 font-dot flex items-center justify-center">
+              <div className="pixel-border bg-purple-900 p-8 max-w-sm text-center flex flex-col items-center">
+                <h3 className="text-yellow-300 text-xl font-bold mb-6">犠牲にする仲間を選んでください</h3>
+                <div className="flex flex-col gap-4 w-full">
+                  {inventory.includes('companion_wakasa') && <button onClick={() => executeRing('companion_wakasa')} className="pixel-border !bg-gray-800 hover:!bg-gray-600 text-white py-3 font-bold">わかさ</button>}
+                  {inventory.includes('companion_kuma') && <button onClick={() => executeRing('companion_kuma')} className="pixel-border !bg-gray-800 hover:!bg-gray-600 text-white py-3 font-bold">クマ</button>}
+                  {inventory.includes('companion_kirin') && <button onClick={() => executeRing('companion_kirin')} className="pixel-border !bg-gray-800 hover:!bg-gray-600 text-white py-3 font-bold">キリン</button>}
+                  <button onClick={() => setShowRingModal(false)} className="pixel-border !bg-gray-700 hover:!bg-gray-600 text-white py-3 font-bold mt-4">やめる</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {isWarning && <div className="warning-active"></div>}
+
+          {showAppearance && (
+            <div className="absolute inset-0 z-[70] flex items-center justify-center pointer-events-none">
+              <div className="bg-black/90 border-y-4 border-white w-full py-8 flex justify-center animate-encounter shadow-[0_0_30px_rgba(0,0,0,0.8)]">
+                <h1 className="text-3xl md:text-5xl font-bold text-white tracking-widest text-shadow-glow text-center leading-normal">{displayMonsterName}<br/>が現れた！</h1>
+              </div>
+            </div>
+          )}
+
+          {showShimaIntro && (
+            <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/80 p-4 font-dot">
+              <div className="pixel-border bg-purple-900/90 p-6 flex flex-col items-center max-w-md text-center shadow-[0_0_20px_rgba(168,85,247,0.5)]">
+                <h2 className="text-yellow-300 text-xl font-bold mb-4">【特殊状態：長寿の知恵】</h2>
+                <p className="text-white mb-6 leading-relaxed text-sm md:text-base">シマシマハゲは登場から10ターンの間、<br/>受けるダメージを <span className="text-red-300 font-bold text-lg">50%の確率で半減</span> させる！</p>
+                <button onClick={() => setShowShimaIntro(false)} className="pixel-border !bg-blue-800 hover:!bg-blue-600 text-white px-8 py-2 font-bold">確認</button>
+              </div>
+            </div>
+          )}
+
+          {showKingIntro && (
+            <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/80 p-4 font-dot">
+              <div className="pixel-border bg-red-900/90 p-6 flex flex-col items-center max-w-md text-center shadow-[0_0_20px_rgba(239,68,68,0.5)]">
+                <h2 className="text-yellow-300 text-xl font-bold mb-4">【猿人王の特殊能力】</h2>
+                <p className="text-white mb-6 leading-relaxed text-sm md:text-base">猿人王はHPが50%以下になると、<br/>一度だけ <span className="text-pink-300 font-bold text-lg">『リアコの召喚』</span> を発動する！</p>
+                <button onClick={() => setShowKingIntro(false)} className="pixel-border !bg-blue-800 hover:!bg-blue-600 text-white px-8 py-2 font-bold">確認</button>
+              </div>
+            </div>
+          )}
+
+          {showNorikoIntro && (
+            <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/80 p-4 font-dot">
+              <div className="pixel-border bg-pink-900/90 p-6 flex flex-col items-center max-w-md text-center shadow-[0_0_20px_rgba(244,114,182,0.5)]">
+                <h2 className="text-yellow-300 text-xl font-bold mb-4">【のりこちゃん 出現】</h2>
+                <p className="text-white mb-6 leading-relaxed text-sm md:text-base">のりこちゃんがいる間、<br/>ガチャの結果は強制的に<br/><span className="text-yellow-200 font-bold text-lg">「１ダメージを与える」</span> になる！</p>
+                <button onClick={() => setShowNorikoIntro(false)} className="pixel-border !bg-blue-800 hover:!bg-blue-600 text-white px-8 py-2 font-bold">確認</button>
+              </div>
+            </div>
+          )}
+
+          <div className="flex-1 bg-dungeon flex flex-col items-center justify-center relative p-2 md:p-4">
+            <div className="absolute top-2 left-2 md:top-4 md:left-4 pixel-border p-2 md:p-4 min-w-[140px] md:min-w-[200px] max-h-[40vh] overflow-y-auto z-10">
+              <h2 className="text-yellow-300 mb-1 md:mb-2 border-b-2 border-gray-500 text-sm md:text-base sticky top-0 bg-black/80">ステータス情報</h2>
+              <div className="text-xs md:text-sm">
+                <p className="text-gray-400">【 発生中の効果 】</p>
+                {statuses.length > 0 ? statuses.map((st, idx) => (
+                  <div key={idx} className={STATUS_DEF[st.id].isEquip ? "text-green-300" : "text-red-300"}>{STATUS_DEF[st.id].isEquip ? '装備品' : '状態'}『{STATUS_DEF[st.id].name}』<br/>(残: {st.turns}T)</div>
+                )) : <p>なし</p>}
+                {monsterIndex === 6 && shimaTurns > 0 && !isNorikoActive && (
+                  <div className="text-purple-400 mt-2">特殊『長寿の知恵』<br/>(残: {shimaTurns}T)<br/><span className="text-[10px] text-gray-300">※被ダメ時50%で半減</span></div>
+                )}
+              </div>
+            </div>
+
+            <div className="text-center z-10 flex flex-col items-center mt-12 md:mt-10">
+              <div className="mb-2 md:mb-4 bg-black/60 px-3 py-1 md:px-4 md:py-2 rounded pixel-border">
+                <h2 className={`text-lg md:text-2xl ${monsterIndex >= 5 ? 'text-red-400 font-bold' : 'text-white'}`}>{displayMonsterName}</h2>
+                <div className="w-48 md:w-64 bg-gray-700 h-5 md:h-6 mt-1 md:mt-2 rounded border border-white relative overflow-hidden">
+                  <div className="h-full bg-green-500 transition-all duration-500" style={{ width: `${(displayHp / displayMaxHp) * 100}%` }}></div>
+                  <span className="absolute inset-0 flex items-center justify-center text-xs md:text-sm drop-shadow-md">HP: {displayHp} / {displayMaxHp}</span>
+                </div>
+              </div>
+              
+              <div className={`relative ${isDefeated ? 'defeat-anim' : (monsterIndex >= 5 ? 'boss-anim' : 'enemy-anim')}`}>
+                <div className="w-56 h-56 md:w-96 md:h-96 relative cursor-pointer flex justify-center items-center drop-shadow-2xl" onClick={handleMonsterTap}>
+                  <img src={displayImage} alt={displayMonsterName} className="w-full h-full object-contain select-none pointer-events-none drop-shadow-[0_0_15px_rgba(0,0,0,0.8)]" onError={(e) => { e.target.src = 'https://via.placeholder.com/400x400/222/fff?text=Monster'; }} />
+                </div>
+                {monsterIndex >= 5 && !isDefeated && !isNorikoActive && <div className="absolute -inset-4 border-4 border-red-500/50 rounded-xl animate-ping pointer-events-none"></div>}
+              </div>
+            </div>
+          </div>
+
+          <div className="absolute top-2 right-2 md:top-4 md:right-4 pixel-border p-2 md:p-3 w-48 md:w-64 h-24 md:h-32 overflow-hidden text-xs md:text-sm opacity-80 pointer-events-none flex flex-col z-30">
+            {log.map((l, i) => <div key={i} className={i === 0 ? 'text-white font-bold' : 'text-gray-400'}>{l}</div>)}
+          </div>
+
+          <div className="bg-black border-t-4 border-white p-4 md:p-6 flex flex-col items-center z-20">
+            {!drawnItem && !isRolling && !isDefeated && !isWarning && !showShimaIntro && !postDefeatState && !encounterStoryText && !farewellData && !showDoorEffect && !showTreasureEffect && (
+              <div className="flex flex-col items-center gap-2">
+                <div className="flex gap-4">
+                  <button disabled={isProcessingQueue} onClick={() => setShowInventory(true)} className="px-4 py-3 md:px-6 md:py-4 bg-green-800 hover:bg-green-600 disabled:opacity-50 border-2 border-white rounded shadow-[0_0_15px_rgba(34,197,94,0.5)] text-base md:text-xl font-bold transition-all active:scale-95 flex items-center gap-2">
+                    道具を使う
+                    {inventory.length > 0 && <span className="bg-red-600 text-white text-xs px-2 py-1 rounded-full">{inventory.length}</span>}
+                  </button>
+                  <button disabled={isProcessingQueue} onClick={handleDrawGacha} className="px-6 py-3 md:px-8 md:py-4 bg-blue-800 hover:bg-blue-600 disabled:opacity-50 border-2 border-white rounded shadow-[0_0_15px_rgba(59,130,246,0.5)] text-lg md:text-xl font-bold transition-all active:scale-95">
+                    １回引く
+                  </button>
+                </div>
+                <div className="mt-2 text-gray-400 text-xs md:text-sm">ガチャ残り: {gachaPool.length} 回</div>
+              </div>
+            )}
+            {isRolling && <div className="text-lg md:text-xl text-yellow-300 animate-pulse py-3 md:py-4">巻物を開いている...</div>}
+          </div>
+
+          {showScroll && drawnItem && (
+            <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 p-6">
+              <div className="relative w-full max-w-lg p-8 md:p-12 scroll-open font-sans text-[#311e0e] old-paper rounded-sm">
+                <div className="absolute -left-4 md:-left-6 top-[-16px] bottom-[-16px] w-6 md:w-8 rounded-sm shadow-[8px_0_15px_rgba(0,0,0,0.8)] border-y-[6px] border-black bg-gradient-to-r from-[#1a0a02] via-[#4a2610] to-[#1a0a02] z-20"></div>
+                <div className="absolute -right-4 md:-right-6 top-[-16px] bottom-[-16px] w-6 md:w-8 rounded-sm shadow-[-8px_0_15px_rgba(0,0,0,0.8)] border-y-[6px] border-black bg-gradient-to-l from-[#1a0a02] via-[#4a2610] to-[#1a0a02] z-20"></div>
+                
+                <div className="relative z-10 text-center font-bold text-base md:text-2xl leading-relaxed whitespace-pre-wrap min-h-[80px] md:min-h-[100px] flex items-center justify-center border-b-[3px] border-[#5c3a21]/30 pb-4 mb-4 md:pb-6 md:mb-6 tracking-wider" style={{ textShadow: '1px 1px 0px rgba(255,255,255,0.2)' }}>
+                  <span>{displayedText}<span className={isTyping ? "animate-pulse" : "hidden"}>|</span></span>
+                </div>
+
+                <div className={`relative z-10 flex flex-col items-center gap-3 md:gap-4 transition-opacity duration-500 ${(!isScrollOpened || isTyping) ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+                  
+                  {actionSummary ? (
+                    <button disabled={isProcessingQueue} onClick={() => handleActionStep2()} className="pixel-border !bg-blue-800 hover:!bg-blue-600 disabled:opacity-50 text-white px-8 py-3 text-lg font-bold">すすむ</button>
+                  ) : (
+                    <>
+                      {['damage', 'damage_box', 'heal_box', 'get_item', 'noriko_force'].includes(drawnItem.type) && (
+                        <button disabled={isProcessingQueue} onClick={() => handleActionStep1()} className="pixel-border !bg-blue-800 hover:!bg-blue-600 disabled:opacity-50 text-white px-6 py-2 md:px-8 md:py-3 text-base md:text-lg font-bold">すすむ</button>
+                      )}
+
+                      {['special_likes', 'special_likes_reduce'].includes(drawnItem.type) && (
+                        <div className="w-full">
+                          <p className="text-center mb-2 text-sm md:text-base font-bold">何個言えた？</p>
+                          <div className="flex justify-center gap-2 flex-wrap mb-2">
+                            {[0,1,2,3,4,5].map(num => (
+                              <button disabled={isProcessingQueue} key={num} onClick={() => handleActionStep1(num)} className="pixel-border !bg-gray-800 hover:!bg-gray-600 disabled:opacity-50 text-white w-10 h-10 md:w-12 md:h-12 text-lg md:text-xl">{num}</button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {drawnItem.type === 'event_boxG' && (
+                        <div className="flex gap-4 md:gap-6">
+                          <button disabled={isProcessingQueue} onClick={() => handleActionStep1('success')} className="pixel-border !bg-green-700 hover:!bg-green-600 disabled:opacity-50 text-white px-4 py-2 md:px-6 md:py-3 text-sm md:text-base font-bold">成功</button>
+                          <button disabled={isProcessingQueue} onClick={() => handleActionStep1('fail')} className="pixel-border !bg-red-700 hover:!bg-red-600 disabled:opacity-50 text-white px-4 py-2 md:px-6 md:py-3 text-sm md:text-base font-bold">失敗</button>
+                        </div>
+                      )}
+
+                      {drawnItem.type === 'event_appA' && (
+                        <div className="flex flex-col items-center gap-3 md:gap-4 w-full">
+                          {!appAState.isActive ? (
+                            <button disabled={isProcessingQueue} onClick={startAppAGame} className="pixel-border !bg-blue-800 hover:!bg-blue-600 disabled:opacity-50 text-white px-6 py-2 md:px-8 md:py-3 text-sm md:text-base font-bold">
+                              ゲーム開始
+                            </button>
+                          ) : (
+                            <div className="w-full flex flex-col items-center animate-fadeIn">
+                              <p className="text-xl md:text-2xl font-bold mb-4 text-[#5c3a21]">現在のダメージ: {appAState.totalDamage}</p>
+                              <div className="flex justify-center gap-2 md:gap-4">
+                                {appAState.cards.map((card, index) => (
+                                  <button 
+                                    key={index} 
+                                    disabled={appAState.isAnimating || appAState.revealedCardIndex !== null}
+                                    onClick={() => handleAppACardClick(index)}
+                                    className={`w-14 h-20 md:w-20 md:h-28 pixel-border text-xl md:text-2xl font-bold transition-all duration-300 flex items-center justify-center ${
+                                      appAState.revealedCardIndex === index 
+                                        ? (card === 'END' ? '!bg-red-700 text-white scale-110' : '!bg-green-600 text-white scale-110') 
+                                        : '!bg-blue-900 text-yellow-300 hover:!bg-blue-700 hover:-translate-y-2'
+                                    }`}
+                                  >
+                                    {appAState.revealedCardIndex === index ? card : '?'}
+                                  </button>
+                                ))}
+                              </div>
+                              <div className="min-h-[2rem] mt-4">
+                                {appAState.revealedCardIndex !== null && (
+                                  <p className="text-lg md:text-xl font-bold text-red-800 animate-pulse">
+                                    {appAState.cards[appAState.revealedCardIndex] === 'END' 
+                                      ? 'END！ゲーム終了！' 
+                                      : `${appAState.cards[appAState.revealedCardIndex]} ダメージ追加！`}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {drawnItem.type === 'choice_firework' && (
+                        <div className="flex gap-4 md:gap-6">
+                          {choiceResult ? (
+                            <button disabled={isProcessingQueue} onClick={() => handleActionStep1(choiceResult.action)} className="pixel-border !bg-blue-800 hover:!bg-blue-600 disabled:opacity-50 text-white px-6 py-2 md:px-8 md:py-3 text-base md:text-lg font-bold">すすむ</button>
+                          ) : (
+                            <>
+                              <button disabled={isProcessingQueue} onClick={() => handleChoice('yes')} className="pixel-border !bg-yellow-600 hover:!bg-yellow-500 disabled:opacity-50 text-white px-6 py-2 md:px-8 md:py-3 text-sm md:text-base font-bold">YES</button>
+                              <button disabled={isProcessingQueue} onClick={() => handleChoice('no')} className="pixel-border !bg-gray-700 hover:!bg-gray-600 disabled:opacity-50 text-white px-6 py-2 md:px-8 md:py-3 text-sm md:text-base font-bold">NO</button>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <button disabled={isProcessingQueue} onClick={() => setShowResetConfirm(true)} className="absolute bottom-2 right-2 md:bottom-4 md:right-4 pixel-border !bg-red-900 hover:!bg-red-700 text-white px-3 py-1 text-xs opacity-70 z-30 disabled:opacity-30">
+            リセット
+          </button>
+
+          {showResetConfirm && (
+            <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 font-dot">
+              <div className="pixel-border bg-gray-900 p-6 flex flex-col items-center max-w-sm">
+                <p className="text-white mb-6 text-sm md:text-base text-center leading-relaxed">進行状況をリセットして<br/>最初からやり直しますか？</p>
+                <div className="flex gap-4">
+                  <button onClick={executeReset} className="pixel-border !bg-red-700 hover:!bg-red-600 text-white px-6 py-2 text-sm md:text-base">はい</button>
+                  <button onClick={() => setShowResetConfirm(false)} className="pixel-border !bg-gray-700 hover:!bg-gray-600 text-white px-6 py-2 text-sm md:text-base">いいえ</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {showInventory && (
+            <div className="absolute inset-0 z-[80] flex items-center justify-center bg-black/80 p-4 font-dot">
+              <div className="pixel-border bg-gray-900 w-full max-w-md p-4 max-h-[80vh] flex flex-col shadow-[0_0_20px_rgba(34,197,94,0.4)]">
+                <h2 className="text-green-300 text-xl font-bold mb-4 border-b border-gray-600 pb-2">どうぐ・仲間</h2>
+                {inventory.length === 0 ? (
+                  <p className="text-gray-400 text-center py-10 text-lg">どうぐを もっていない</p>
+                ) : (
+                  <div className="overflow-y-auto flex-1 mb-4 flex flex-col gap-2 p-1">
+                    {inventory.map((itemId, idx) => (
+                      <button key={idx} onClick={() => setSelectedItemIndex(idx)} className="text-left px-4 py-3 border-2 border-gray-600 hover:border-white hover:bg-gray-700 bg-gray-800 text-white rounded font-bold text-lg transition-colors">{ITEM_DEF[itemId].name}</button>
+                    ))}
+                  </div>
+                )}
+                <button onClick={() => { setShowInventory(false); setSelectedItemIndex(null); }} className="pixel-border !bg-gray-700 hover:!bg-gray-600 text-white py-3 w-full mt-auto font-bold text-lg">とじる</button>
+              </div>
+            </div>
+          )}
+
+          {selectedItemIndex !== null && (
+            <div className="absolute inset-0 z-[90] flex items-center justify-center bg-black/90 p-4 font-dot">
+              <div className="pixel-border bg-blue-900/90 w-full max-w-sm p-6 flex flex-col items-center text-center shadow-[0_0_30px_rgba(59,130,246,0.5)]">
+                <h3 className="text-yellow-300 text-2xl font-bold mb-4 border-b border-blue-400 pb-2 w-full">{ITEM_DEF[inventory[selectedItemIndex]].name}</h3>
+                <p className="text-white mb-8 leading-relaxed text-lg">{ITEM_DEF[inventory[selectedItemIndex]].desc}</p>
+                <div className="flex gap-6 w-full justify-center">
+                  {ITEM_DEF[inventory[selectedItemIndex]].type !== 'companion' && (
+                    <button onClick={() => handleUseItem(selectedItemIndex)} className="pixel-border !bg-green-700 hover:!bg-green-600 text-white px-8 py-3 font-bold text-lg">
+                      {inventory[selectedItemIndex] === 'shima_cloth' && monsterIndex === 6 ? '渡す' : '使う'}
+                    </button>
+                  )}
+                  <button onClick={() => setSelectedItemIndex(null)} className="pixel-border !bg-gray-700 hover:!bg-gray-600 text-white px-8 py-3 font-bold text-lg">戻る</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
