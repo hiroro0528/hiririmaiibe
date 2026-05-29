@@ -74,7 +74,6 @@
 
       add(1, { type: 'get_item', itemId: 'vaccine', text: '道具「ワクチン」を獲得。\n効果は「モンスターになった人間を元に戻すことができる。」' });
       add(1, { type: 'get_item', itemId: 'takidashi', text: '道具「炊き出し」を獲得。\n効果は「使用後、モンスターを猛毒状態にする。毎ターン５ダメージを与える、ランダムで2から8ターン持続する。」' });
-      // シマシマの服は確定ドロップに回したため、通常のガチャプールからは削除しています
       
       add(10, { type: 'damage', text: '物理攻撃で５ダメージ与えた。ビンタ５回。', damage: 5 });
       add(10, { type: 'damage', text: '物理攻撃で10ダメージ与えた。ビンタ10回。', damage: 10 });
@@ -146,7 +145,7 @@
       const [ringDropTarget, setRingDropTarget] = useState(saveData?.ringDropTarget ?? Math.floor(Math.random() * 11) + 20);
       const [hasDroppedRing, setHasDroppedRing] = useState(saveData?.hasDroppedRing ?? false);
 
-      // 🔽 追加：シマシマの服のドロップ設定 (5〜10回目) 🔽
+      // シマシマの服のドロップ設定 (5〜10回目)
       const [shimaDropTarget, setShimaDropTarget] = useState(saveData?.shimaDropTarget ?? Math.floor(Math.random() * 6) + 5);
       const [hasDroppedShima, setHasDroppedShima] = useState(saveData?.hasDroppedShima ?? false);
 
@@ -210,6 +209,9 @@
       const [isProcessingQueue, setIsProcessingQueue] = useState(false);
       const [textEffect, setTextEffect] = useState(null); 
       const [popupEffect, setPopupEffect] = useState(null);
+      
+      // 🔽 追加：特別な全画面カットイン演出用 🔽
+      const [cutinEffect, setCutinEffect] = useState(null);
 
       const currentMonster = MONSTERS[monsterIndex];
       const displayMonsterName = isNorikoActive ? 'のりこちゃん' : currentMonster.name;
@@ -353,6 +355,7 @@
         setActionSummary(null); setPopupEffect(null); setShowDoorEffect(false); setIsProcessingQueue(false);
         setAppAState({ isActive: false, totalDamage: 0, cards: [], revealedCardIndex: null, isAnimating: false });
         setHasGivenShimaCloth(false); setMonsterMaxHpModifier(0); setShowTreasureEffect(false); setIsOpeningTreasure(false);
+        setCutinEffect(null);
       };
       
       useEffect(() => {
@@ -385,7 +388,7 @@
         const currentCount = totalGachaCount + 1;
         setTotalGachaCount(currentCount);
 
-        // 🔽 シマシマの服のドロップ (5〜10回目) 🔽
+        // シマシマの服のドロップ (5〜10回目)
         if (currentCount >= shimaDropTarget && !hasDroppedShima) {
           setHasDroppedShima(true); setIsRolling(true); setShowScroll(false); setChoiceResult(null);
           setDrawnItem({ type: 'get_item', itemId: 'shima_cloth', text: '道具「シマシマの服」を獲得した。\n効果は、何に使うんだろう…。', id: Math.random().toString(36).substring(7) });
@@ -544,6 +547,12 @@
             await new Promise(r => setTimeout(r, 1500));
             setTextEffect(null);
             await new Promise(r => setTimeout(r, 200)); 
+          // 🔽 新しく追加した「カットイン」処理をキューで実行 🔽
+          } else if (item.type === 'cutin') {
+            setCutinEffect({ title: item.title, desc: item.desc, bgColor: item.bgColor, titleColor: item.titleColor });
+            await new Promise(r => setTimeout(r, 3500));
+            setCutinEffect(null);
+            await new Promise(r => setTimeout(r, 200));
           } else if (item.type === 'number') {
             if (item.isDamage) triggerDamageFlash();
             setPopupEffect({ val: item.val, type: item.isDamage ? 'damage' : 'heal', key: Math.random() });
@@ -688,8 +697,15 @@
 
         const result = applyDamageAndHealLogic(damageAmount, healAmount, isGigafile, logMsg);
         
+        // 🔽 変更：シマシマの服を渡した時に専用のカットインを発生させる 🔽
         if (isGiveShima) {
-          result.effects.push({ type: 'text', style: 'shima', text: 'HPの上限を100増やし、\n増えた分回復する！' });
+          result.effects.push({ 
+            type: 'cutin', 
+            title: '👕 シマシマの服 を渡した！ 👕', 
+            desc: 'シマシマハゲの HP上限 が 100 増加し、\nHPが 100 回復 した！',
+            bgColor: 'bg-green-900/90',
+            titleColor: 'text-yellow-300'
+          });
           result.netChange = 100; result.logMsg = "シマシマの服を渡した！敵のHP上限とHPが100回復した！";
         }
 
@@ -731,8 +747,16 @@
         });
         setStatuses(prev => [...prev.filter(s => s.id !== 'ring'), { id: 'ring', turns: 5 }]);
 
+        // 🔽 変更：キリンを犠牲にして「偽りのファミリー」を手に入れた時にカットインを発生させる 🔽
         if (companionId === 'companion_kirin') {
           addLog(`${ITEM_DEF[companionId].name}とお別れした...\n道具『偽りのファミリー』を獲得！`);
+          setCutinEffect({
+            title: '✨ 偽りのファミリー 獲得 ✨',
+            desc: '【 永続効果 】\n敵のHP全回復を阻止し、\n「10回復」に変換する！',
+            bgColor: 'bg-purple-900/90',
+            titleColor: 'text-yellow-300'
+          });
+          setTimeout(() => setCutinEffect(null), 3500);
         } else {
           addLog(`${ITEM_DEF[companionId].name}とお別れした...\n次のターンから5ターンの間、追加ダメージ付与！`);
         }
@@ -953,9 +977,29 @@
             .treasure-box { font-size: 6rem; animation: treasureShake 0.5s infinite; transition: all 0.5s; cursor: default; user-select: none; }
             .treasure-box.opening { animation: treasureOpen 1s forwards; }
             .pixel-border { border: 4px solid white; border-radius: 8px; background-color: rgba(0,0,0,0.8); box-shadow: 4px 4px 0px #000; }
+            
+            /* 🔽 追加：全画面カットイン用のド派手アニメーション 🔽 */
+            @keyframes cutinAnim {
+              0% { transform: scale(0.5) translateY(50px); opacity: 0; }
+              15% { transform: scale(1.1) translateY(0); opacity: 1; }
+              30% { transform: scale(1) translateY(0); opacity: 1; }
+              85% { transform: scale(1) translateY(0); opacity: 1; }
+              100% { transform: scale(1.2) translateY(-20px); opacity: 0; }
+            }
+            .cutin-container { animation: cutinAnim 3.5s ease-in-out forwards; }
           `}</style>
 
           {flashKey > 0 && <div key={flashKey} className="flash-overlay"></div>}
+
+          {/* 🔽 追加：全画面カットイン表示エリア 🔽 */}
+          {cutinEffect && (
+            <div className="absolute inset-0 z-[200] flex items-center justify-center bg-black/70">
+              <div className={`cutin-container pixel-border p-6 md:p-12 text-center flex flex-col items-center justify-center ${cutinEffect.bgColor} shadow-[0_0_50px_rgba(255,255,255,0.8)]`}>
+                <h1 className={`text-2xl md:text-4xl font-bold mb-6 drop-shadow-[0_0_10px_rgba(0,0,0,1)] ${cutinEffect.titleColor}`}>{cutinEffect.title}</h1>
+                <p className="text-white text-lg md:text-2xl font-bold whitespace-pre-wrap leading-relaxed drop-shadow-[0_0_5px_rgba(0,0,0,1)]">{cutinEffect.desc}</p>
+              </div>
+            </div>
+          )}
 
           {showDoorEffect && (
             <div className="absolute inset-0 z-[140] bg-black overflow-hidden flex justify-center">
@@ -1131,11 +1175,11 @@
             {!drawnItem && !isRolling && !isDefeated && !isWarning && !showShimaIntro && !postDefeatState && !encounterStoryText && !farewellData && !showDoorEffect && !showTreasureEffect && (
               <div className="flex flex-col items-center gap-2">
                 <div className="flex gap-4">
-                  <button disabled={isProcessingQueue} onClick={() => setShowInventory(true)} className="px-4 py-3 md:px-6 md:py-4 bg-green-800 hover:bg-green-600 disabled:opacity-50 border-2 border-white rounded shadow-[0_0_15px_rgba(34,197,94,0.5)] text-base md:text-xl font-bold transition-all active:scale-95 flex items-center gap-2">
+                  <button disabled={isProcessingQueue || cutinEffect} onClick={() => setShowInventory(true)} className="px-4 py-3 md:px-6 md:py-4 bg-green-800 hover:bg-green-600 disabled:opacity-50 border-2 border-white rounded shadow-[0_0_15px_rgba(34,197,94,0.5)] text-base md:text-xl font-bold transition-all active:scale-95 flex items-center gap-2">
                     道具を使う
                     {inventory.length > 0 && <span className="bg-red-600 text-white text-xs px-2 py-1 rounded-full">{inventory.length}</span>}
                   </button>
-                  <button disabled={isProcessingQueue} onClick={handleDrawGacha} className="px-6 py-3 md:px-8 md:py-4 bg-blue-800 hover:bg-blue-600 disabled:opacity-50 border-2 border-white rounded shadow-[0_0_15px_rgba(59,130,246,0.5)] text-lg md:text-xl font-bold transition-all active:scale-95">
+                  <button disabled={isProcessingQueue || cutinEffect} onClick={handleDrawGacha} className="px-6 py-3 md:px-8 md:py-4 bg-blue-800 hover:bg-blue-600 disabled:opacity-50 border-2 border-white rounded shadow-[0_0_15px_rgba(59,130,246,0.5)] text-lg md:text-xl font-bold transition-all active:scale-95">
                     １回引く
                   </button>
                 </div>
@@ -1241,7 +1285,7 @@
             </div>
           )}
 
-          <button disabled={isProcessingQueue} onClick={() => setShowResetConfirm(true)} className="absolute bottom-2 right-2 md:bottom-4 md:right-4 pixel-border !bg-red-900 hover:!bg-red-700 text-white px-3 py-1 text-xs opacity-70 z-30 disabled:opacity-30">
+          <button disabled={isProcessingQueue || cutinEffect} onClick={() => setShowResetConfirm(true)} className="absolute bottom-2 right-2 md:bottom-4 md:right-4 pixel-border !bg-red-900 hover:!bg-red-700 text-white px-3 py-1 text-xs opacity-70 z-30 disabled:opacity-30">
             リセット
           </button>
 
