@@ -8,6 +8,7 @@
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <link rel="apple-touch-icon" href="public/images/sarugoburinn.png">
 </head>
 <body class="bg-black">
   <div id="root"></div>
@@ -15,7 +16,7 @@
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
-    // === データ定義（画像パスを public/images/ の .png に変更） ===
+    // === データ定義 ===
     const MONSTERS = [
       { id: 1, name: '猿ゴブリン', maxHp: 30, image: 'public/images/sarugoburinn.png' },
       { id: 2, name: '爆走板チャリ女', maxHp: 40, image: 'public/images/itatyarionnna.png' },
@@ -73,7 +74,7 @@
 
       add(1, { type: 'get_item', itemId: 'vaccine', text: '道具「ワクチン」を獲得。\n効果は「モンスターになった人間を元に戻すことができる。」' });
       add(1, { type: 'get_item', itemId: 'takidashi', text: '道具「炊き出し」を獲得。\n効果は「使用後、モンスターを猛毒状態にする。毎ターン５ダメージを与える、ランダムで2から8ターン持続する。」' });
-      add(1, { type: 'get_item', itemId: 'shima_cloth', text: '道具「シマシマの服」を獲得した。\n効果は、何に使うんだろう…。' });
+      // シマシマの服は確定ドロップに回したため、通常のガチャプールからは削除しています
       
       add(10, { type: 'damage', text: '物理攻撃で５ダメージ与えた。ビンタ５回。', damage: 5 });
       add(10, { type: 'damage', text: '物理攻撃で10ダメージ与えた。ビンタ10回。', damage: 10 });
@@ -140,8 +141,14 @@
       const [hasSummonedNoriko, setHasSummonedNoriko] = useState(saveData?.hasSummonedNoriko ?? false);
 
       const [totalGachaCount, setTotalGachaCount] = useState(saveData?.totalGachaCount ?? 0);
+      
+      // 指輪のドロップ設定 (20〜30回目)
       const [ringDropTarget, setRingDropTarget] = useState(saveData?.ringDropTarget ?? Math.floor(Math.random() * 11) + 20);
       const [hasDroppedRing, setHasDroppedRing] = useState(saveData?.hasDroppedRing ?? false);
+
+      // 🔽 追加：シマシマの服のドロップ設定 (5〜10回目) 🔽
+      const [shimaDropTarget, setShimaDropTarget] = useState(saveData?.shimaDropTarget ?? Math.floor(Math.random() * 6) + 5);
+      const [hasDroppedShima, setHasDroppedShima] = useState(saveData?.hasDroppedShima ?? false);
 
       const [hasGivenShimaCloth, setHasGivenShimaCloth] = useState(saveData?.hasGivenShimaCloth ?? false);
       const [monsterMaxHpModifier, setMonsterMaxHpModifier] = useState(saveData?.monsterMaxHpModifier ?? 0);
@@ -323,11 +330,12 @@
       useEffect(() => {
         const dataToSave = { 
           monsterIndex, hp, gachaPool, boxCounts, statuses, shimaTurns, inventory, gameClear, log, 
-          isNorikoActive, norikoHp, hasSummonedNoriko, hasSeenIntro, introPhase, totalGachaCount, ringDropTarget, hasDroppedRing,
+          isNorikoActive, norikoHp, hasSummonedNoriko, hasSeenIntro, introPhase, totalGachaCount, 
+          ringDropTarget, hasDroppedRing, shimaDropTarget, hasDroppedShima, 
           hasGivenShimaCloth, monsterMaxHpModifier 
         };
         localStorage.setItem('dungeon_rpg_save', JSON.stringify(dataToSave));
-      }, [monsterIndex, hp, gachaPool, boxCounts, statuses, shimaTurns, inventory, gameClear, log, isNorikoActive, norikoHp, hasSummonedNoriko, hasSeenIntro, introPhase, totalGachaCount, ringDropTarget, hasDroppedRing, hasGivenShimaCloth, monsterMaxHpModifier]);
+      }, [monsterIndex, hp, gachaPool, boxCounts, statuses, shimaTurns, inventory, gameClear, log, isNorikoActive, norikoHp, hasSummonedNoriko, hasSeenIntro, introPhase, totalGachaCount, ringDropTarget, hasDroppedRing, shimaDropTarget, hasDroppedShima, hasGivenShimaCloth, monsterMaxHpModifier]);
 
       const executeReset = () => {
         localStorage.removeItem('dungeon_rpg_save');
@@ -339,7 +347,9 @@
         setEncounterStoryText(null); setEncounterDisplayedText(''); setIsEncounterTyping(false);
         setFarewellData(null); setFarewellDisplayedText(''); setIsFarewellTyping(false);
         setPostDefeatState(null); setPostDefeatDisplayedText(''); setIsPostDefeatTyping(false);
-        setTotalGachaCount(0); setRingDropTarget(Math.floor(Math.random() * 11) + 20); setHasDroppedRing(false);
+        setTotalGachaCount(0); 
+        setRingDropTarget(Math.floor(Math.random() * 11) + 20); setHasDroppedRing(false);
+        setShimaDropTarget(Math.floor(Math.random() * 6) + 5); setHasDroppedShima(false);
         setActionSummary(null); setPopupEffect(null); setShowDoorEffect(false); setIsProcessingQueue(false);
         setAppAState({ isActive: false, totalDamage: 0, cards: [], revealedCardIndex: null, isAnimating: false });
         setHasGivenShimaCloth(false); setMonsterMaxHpModifier(0); setShowTreasureEffect(false); setIsOpeningTreasure(false);
@@ -375,6 +385,15 @@
         const currentCount = totalGachaCount + 1;
         setTotalGachaCount(currentCount);
 
+        // 🔽 シマシマの服のドロップ (5〜10回目) 🔽
+        if (currentCount >= shimaDropTarget && !hasDroppedShima) {
+          setHasDroppedShima(true); setIsRolling(true); setShowScroll(false); setChoiceResult(null);
+          setDrawnItem({ type: 'get_item', itemId: 'shima_cloth', text: '道具「シマシマの服」を獲得した。\n効果は、何に使うんだろう…。', id: Math.random().toString(36).substring(7) });
+          setTimeout(() => { setIsRolling(false); setShowScroll(true); }, 1000);
+          return;
+        }
+
+        // 指輪のドロップ (20〜30回目)
         if (currentCount >= ringDropTarget && !hasDroppedRing) {
           setHasDroppedRing(true); setIsRolling(true); setShowScroll(false); setChoiceResult(null);
           setDrawnItem({ type: 'get_item', itemId: 'ring', text: '道具「結婚指輪」を獲得。\n効果は「仲間が一人いなくなる代わりに、次のターンから５ターンの間、10以下のダメージを与える際、追加で10ダメージを与える。」', id: Math.random().toString(36).substring(7) });
