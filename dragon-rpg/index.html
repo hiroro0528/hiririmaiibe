@@ -31,8 +31,8 @@
 
     const INITIAL_BOX_COUNTS = { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0, G: 0, H: 0, I: 0, J: 0, K: 0, L: 0 };
     const EXTRAS = {
-      A: '洗濯ばさみ。', B: '電気。', C: 'ガムテープ。', D: 'センブリ茶。', E: '足つぼ。',
-      F: '酸っぱい。', G: '型抜きチャレンジ。', H: 'カップ麺。', I: 'サソリ。', J: 'セミ。', K: '激辛。', L: 'スプレー。'
+      A: '洗濯ばさみ。', B: '電気。', C: 'ガムテープ。', D: '激苦。', E: '足つぼ。',
+      F: 'ランダムパック。', G: '型抜きチャレンジ。', H: 'カップ麺。', I: 'サソリ。', J: 'コガネムシ。', K: '激辛。', L: 'スプレー。'
     };
 
     const STATUS_DEF = {
@@ -80,18 +80,18 @@
       add(3, { type: 'damage_box', text: '魔法攻撃で20ダメージ与えた。箱Bを開ける。', damage: 20, box: 'B' });
       add(5, { type: 'damage_box', text: '魔法攻撃で15ダメージ与えた。箱Aを開ける。', damage: 15, box: 'A' });
       add(2, { type: 'damage_box', text: '罠にはめて25ダメージ与えた。箱Cを開ける。', damage: 25, box: 'C' });
-      add(5, { type: 'heal_box', text: '敵は回復薬を飲んで10回復した。箱Dを開ける。', heal: 10, box: 'D' });
+      add(3, { type: 'heal_box', text: '敵は回復薬を飲んで10回復した。箱Dを開ける。', heal: 10, box: 'D' });
       add(4, { type: 'heal_box', text: '敵は食事をして30回復した。箱Hを開ける。', heal: 30, box: 'H' });
       add(2, { type: 'heal_box', text: '敵は保存食を食べて20回復した。箱Iを開ける。', heal: 20, box: 'I' });
       add(2, { type: 'heal_box', text: '敵は保存食を食べて15回復した。箱Jを開ける。', heal: 15, box: 'J' });
       add(7, { type: 'damage_box', text: '罠にはめて15ダメージ与えた。箱Eを開ける。', damage: 15, box: 'E' });
-      add(5, { type: 'damage_box', text: '毒を盛って10ダメージ与えた。箱Fを開ける。', damage: 10, box: 'F' });
+      add(4, { type: 'damage_box', text: '毒を盛って10ダメージ与えた。箱Fを開ける。', damage: 10, box: 'F' });
       
       add(2, { type: 'damage_box', text: '魔法攻撃で15ダメージ与えた。箱Kを開ける。', damage: 15, box: 'K' });
       add(2, { type: 'damage_box', text: '魔法攻撃で15ダメージ与えた。箱Lを開ける。', damage: 15, box: 'L' });
 
-      if (monsterIdx >= 5) {
-        add(5, { type: 'damage_box', text: '毒を盛って30ダメージ与えた。箱Kを開ける。', damage: 30, box: 'K' });
+      if (monsterIdx >= 1) {
+        add(1, { type: 'damage_box', text: '毒を盛って30ダメージ与えた。箱Kを開ける。', damage: 30, box: 'K' });
       }
 
       add(5, { type: 'special_likes', text: '特殊ダメージ。ひろろの好きな所を最大５個言う。\n（1つにつき2ダメージ与える）' });
@@ -259,7 +259,7 @@
         appearanceTimerRef.current = setTimeout(() => {
           setShowAppearance(false);
           if (idx === 1) setEncounterStoryText("キリン\n「あれは、わかさ？！なんでこんな所に、でも様子がおかしい、、まさか、、、ワクチンで直せるかも」");
-          else if (idx === 4) setEncounterStoryText("わかさ\n「あれはクマちゃん？筋肉の量が少なくなってるけどやはりモンスター化してるらしい、、」");
+          else if (idx === 4) setEncounterStoryText("わかさ\n「あれはクマちゃん？いつもより筋肉の量が少なくなってるけどモンスター化してるらしい、、」");
           else if (idx === 5) setEncounterStoryText("わかさ\n「私のひろろ！見るも無残な姿に…待っててね！今私が助けるから！あぁん///」");
         }, 2500);
       };
@@ -836,7 +836,7 @@
         } else if (postDefeatState.type === 'treasure_opened') {
           setPostDefeatState({ type: 'ending_story_1', text: "激闘の末、まーくんは静かに倒れ伏した。\n彼の中の狂気は消え、ダンジョンを覆っていた邪悪な気配も霧散していく…" }); return;
         } else if (postDefeatState.type === 'ending_story_1') {
-          setPostDefeatState({ type: 'ending_story_2', text: "村に戻ると、呪縛から解き放たれたひろろの姿があった。\nまだ記憶は曖昧なようだが、その顔にはかつての優しい笑顔が戻っていた。" }); return;
+          setPostDefeatState({ type: 'ending_story_2', text: "呪縛から解き放たれたひろろは\nまだ記憶が曖昧なようだが、その顔にはかつての優しい笑顔が戻っていた。" }); return;
         } else if (postDefeatState.type === 'ending_story_2') {
           setPostDefeatState({ type: 'ending_story_3', text: "犠牲になった仲間たちの想いを胸に、村は再び歩み始める。\n活気と笑顔を取り戻した村に、ついに真の平和が訪れたのだった——。" }); return;
         } else if (postDefeatState.type === 'ending_story_3') {
@@ -864,9 +864,9 @@
       };
 
       const introTexts = [
-        "決して裕福ではないが、みんなが仲良しで助け合いを大切にしている村があると聞き、僕はこの村に興味を持ち行くことにした。",
-        "しかし、着いてみると、聞いていた話とは違い、畑は荒れ、活気がなく想像とは全く別物だった、、",
-        "とりあえず、村の人に話を聞いてみた、そしたら驚きの事実が明らかに",
+        "俺は様々な依頼をこなす冒険者だ",
+        "とある村から一つの依頼があった",
+        "依頼を受け、村の人に話を聞いてみた、そしたら驚きの事実が明らかに",
         "「この村にはまるで家族のように仲のいい、若者ひろろと御長寿まーくんがいた。御長寿ということもあり寿命でまーくんは死んでしまった。」",
         "「それからひろろはおかしくなり、まるで何かに操られてるかのように、村を荒らし、人を襲うようになった、あんなに優しい若者だったのになぁ、、」",
         "「いま、ひろろはダンジョンの洞窟の中に住み着いている、どうかひろろを助けてくれないだろうか…」",
