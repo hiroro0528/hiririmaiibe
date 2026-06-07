@@ -72,11 +72,11 @@
         for (let i = 0; i < count; i++) pool.push({ ...item, id: Math.random().toString(36).substring(7) });
       };
 
-      add(1, { type: 'get_item', itemId: 'vaccine', text: '道具「ワクチン」を獲得。\n効果は「モンスターになった人間を元に戻すことができる。」' });
       add(1, { type: 'get_item', itemId: 'takidashi', text: '道具「炊き出し」を獲得。\n効果は「使用後、モンスターを猛毒状態にする。毎ターン５ダメージを与える、ランダムで2から8ターン持続する。」' });
       
       add(10, { type: 'damage', text: '物理攻撃で５ダメージ与えた。ビンタ５回。', damage: 5 });
       add(10, { type: 'damage', text: '物理攻撃で10ダメージ与えた。ビンタ10回。', damage: 10 });
+      add(5, { type: 'damage', text: '物理攻撃で15ダメージ与えた。ビンタ15回。', damage: 15 });
       add(3, { type: 'damage_box', text: '魔法攻撃で20ダメージ与えた。箱Bを開ける。', damage: 20, box: 'B' });
       add(5, { type: 'damage_box', text: '魔法攻撃で15ダメージ与えた。箱Aを開ける。', damage: 15, box: 'A' });
       add(2, { type: 'damage_box', text: '罠にはめて25ダメージ与えた。箱Cを開ける。', damage: 25, box: 'C' });
@@ -99,7 +99,6 @@
       add(3, { type: 'event_boxG', text: 'イベント発生。箱Gを開ける。\n成功でHP全回復。失敗でHP半減。', box: 'G' });
       add(2, { type: 'event_appA', text: 'イベント発生。カード引きゲームを行い、ENDが出るまで引き続け、出た合計のダメージを与える。' });
       
-      add(1, { type: 'choice_firework', id_suffix: 1, text: 'ドキドキの二択。花火を投げる？' });
       add(1, { type: 'choice_firework', id_suffix: 2, text: 'ドキドキの二択。花火を投げる？' });
       add(1, { type: 'choice_firework', id_suffix: 3, text: 'ドキドキの二択。花火を投げる？' });
       add(1, { type: 'choice_firework', id_suffix: 4, text: 'ドキドキの二択。花火を投げる？' });
@@ -108,7 +107,22 @@
       add(1, { type: 'choice_firework', id_suffix: 7, text: 'ドキドキの二択。花火を投げる？' });
       add(1, { type: 'choice_firework', id_suffix: 8, text: 'ドキドキの二択。花火を投げる？' });
 
-      return shuffleArray(pool);
+      let shuffled = shuffleArray(pool);
+
+      const vaccineItem = { type: 'get_item', itemId: 'vaccine', text: '道具「ワクチン」を獲得。\n効果は「モンスターになった人間を元に戻すことができる。」', id: Math.random().toString(36).substring(7) };
+      const monkeyItem = { type: 'choice_firework', id_suffix: 1, text: 'ドキドキの二択。花火を投げる？', id: Math.random().toString(36).substring(7) };
+      
+      const insertRandomTop = (arr, item, range) => {
+        const maxIdx = arr.length;
+        const minIdx = Math.max(0, maxIdx - range);
+        const insertIdx = Math.floor(Math.random() * (maxIdx - minIdx + 1)) + minIdx;
+        arr.splice(insertIdx, 0, item);
+      };
+
+      insertRandomTop(shuffled, vaccineItem, 29);
+      insertRandomTop(shuffled, monkeyItem, 29);
+
+      return shuffled;
     };
 
     function App() {
@@ -566,7 +580,7 @@
         } else {
           if (payload.itemId) setInventory(prev => [...prev, payload.itemId]);
           if (payload.logMsg) addLog(payload.logMsg);
-          updateStatuses(payload.newStatus);
+          updateStatuses(payload.newStatus, payload.clearStatus);
 
           if (monsterIndex === 5 && !hasSummonedNoriko && payload.nextHp <= 50 && payload.nextHp > 0) {
             setIsNorikoActive(true); setHasSummonedNoriko(true); setNorikoHp(5);
@@ -640,14 +654,28 @@
         return { netChange, breakdown, effects, logMsg: logMsgs.join('\n') };
       };
 
-      const updateStatuses = (newStatusId) => {
-        let nextStatuses = statuses.map(s => ({ ...s, turns: s.turns - 1 })).filter(s => s.turns > 0);
-        if (newStatusId) {
-          nextStatuses = nextStatuses.filter(s => s.id !== newStatusId);
-          nextStatuses.push({ id: newStatusId, turns: 5 });
-          addLog(`${STATUS_DEF[newStatusId].name}が付与された！(5T)`);
+      const updateStatuses = (newStatusObj, clearStatus = false) => {
+        setStatuses(prev => {
+          let current = prev;
+          if (clearStatus) {
+            current = current.filter(s => STATUS_DEF[s.id].isEquip);
+          }
+          let nextStatuses = current.map(s => ({ ...s, turns: s.turns - 1 })).filter(s => s.turns > 0);
+          if (newStatusObj) {
+            const statusId = typeof newStatusObj === 'string' ? newStatusObj : newStatusObj.id;
+            const turns = typeof newStatusObj === 'string' ? 5 : newStatusObj.turns;
+            nextStatuses = nextStatuses.filter(s => s.id !== statusId);
+            nextStatuses.push({ id: statusId, turns: turns });
+          }
+          return nextStatuses;
+        });
+
+        if (newStatusObj) {
+          const statusId = typeof newStatusObj === 'string' ? newStatusObj : newStatusObj.id;
+          const turns = typeof newStatusObj === 'string' ? 5 : newStatusObj.turns;
+          addLog(`${STATUS_DEF[statusId].name}が付与された！(${turns}T)`);
         }
-        setStatuses(nextStatuses);
+
         if (monsterIndex === 6 && shimaTurns > 0) {
           setShimaTurns(prev => prev - 1);
           if (shimaTurns - 1 === 0) addLog("特殊状態『長寿の知恵』の効果が切れた。");
@@ -672,10 +700,12 @@
         const itemId = inventory[index]; const item = ITEM_DEF[itemId];
         let healAmount = 0; let damageAmount = 0; let isGigafile = false; let logMsg = `『${item.name}』を使った！\n`;
         let isGiveShima = false;
+        let newStatusObj = null;
+        let clearStatus = false;
 
         if (item.type === 'heal') { healAmount = item.value; logMsg += `敵のHPが${healAmount === 9999 ? '全' : healAmount}回復した...`; }
         else if (item.type === 'damage') { damageAmount = item.value; logMsg += `敵に${damageAmount}のダメージ！`; }
-        else if (item.type === 'cure') { setStatuses(prev => prev.filter(s => STATUS_DEF[s.id].isEquip)); logMsg += `状態異常が回復した！`; }
+        else if (item.type === 'cure') { clearStatus = true; logMsg += `状態異常が回復した！`; }
         else if (item.type === 'none') { 
           if (itemId === 'shima_cloth' && monsterIndex === 6) {
             isGiveShima = true; setHasGivenShimaCloth(true); setMonsterMaxHpModifier(100); healAmount = 100;
@@ -683,7 +713,7 @@
           } else { logMsg += `しかし、ここでは使えないようだ。`; }
         }
         else if (item.type === 'companion') { logMsg += `${item.name}は常に力を貸してくれている！`; }
-        else if (item.type === 'takidashi') { const t = Math.floor(Math.random() * 7) + 2; setStatuses(prev => [...prev.filter(s => s.id !== 'modoku'), { id: 'modoku', turns: t }]); logMsg += `敵を猛毒状態にした！(${t}ターン)`; }
+        else if (item.type === 'takidashi') { const t = Math.floor(Math.random() * 7) + 2; newStatusObj = { id: 'modoku', turns: t }; logMsg += `敵を猛毒状態にした！(${t}ターン)`; }
         else if (item.type === 'ring') {
           const companions = inventory.filter(id => ITEM_DEF[id].type === 'companion');
           if (companions.length === 0) logMsg += `しかし仲間がいなかった！効果がない！`;
@@ -717,7 +747,7 @@
         else if (result.netChange > 0) queue.push({ type: 'number', val: result.netChange, isDamage: false });
         queue.push({ type: 'apply_hp', newHp: nextHp });
 
-        executeQueue(queue, { isNoriko: false, netChange: result.netChange, nextHp, logMsg: result.logMsg, newStatus: null });
+        executeQueue(queue, { isNoriko: false, netChange: result.netChange, nextHp, logMsg: result.logMsg, newStatus: newStatusObj, clearStatus });
       };
 
       const executeRing = (companionId) => {
