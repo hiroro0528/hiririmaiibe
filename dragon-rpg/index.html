@@ -1,3 +1,8 @@
+iPad mini 5の縦画面（解像度 768 x 1024）向けに、フォントサイズ、要素の幅・高さ、余白などのサイズ関連クラスを全体的に大きくし、最適化しました。ロジックや機能自体は一切変更していません。
+
+以下のコードをコピーして、そのまま `index.html` として保存・ご使用ください。
+
+```html
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -141,11 +146,9 @@
 
       const [totalGachaCount, setTotalGachaCount] = useState(saveData?.totalGachaCount ?? 0);
       
-      // 指輪のドロップ設定 (20〜30回目)
       const [ringDropTarget, setRingDropTarget] = useState(saveData?.ringDropTarget ?? Math.floor(Math.random() * 11) + 20);
       const [hasDroppedRing, setHasDroppedRing] = useState(saveData?.hasDroppedRing ?? false);
 
-      // シマシマの服のドロップ設定 (5〜10回目)
       const [shimaDropTarget, setShimaDropTarget] = useState(saveData?.shimaDropTarget ?? Math.floor(Math.random() * 6) + 5);
       const [hasDroppedShima, setHasDroppedShima] = useState(saveData?.hasDroppedShima ?? false);
 
@@ -210,7 +213,6 @@
       const [textEffect, setTextEffect] = useState(null); 
       const [popupEffect, setPopupEffect] = useState(null);
       
-      // 🔽 追加：特別な全画面カットイン演出用 🔽
       const [cutinEffect, setCutinEffect] = useState(null);
 
       const currentMonster = MONSTERS[monsterIndex];
@@ -388,7 +390,6 @@
         const currentCount = totalGachaCount + 1;
         setTotalGachaCount(currentCount);
 
-        // シマシマの服のドロップ (5〜10回目)
         if (currentCount >= shimaDropTarget && !hasDroppedShima) {
           setHasDroppedShima(true); setIsRolling(true); setShowScroll(false); setChoiceResult(null);
           setDrawnItem({ type: 'get_item', itemId: 'shima_cloth', text: '道具「シマシマの服」を獲得した。\n効果は、何に使うんだろう…。', id: Math.random().toString(36).substring(7) });
@@ -396,7 +397,6 @@
           return;
         }
 
-        // 指輪のドロップ (20〜30回目)
         if (currentCount >= ringDropTarget && !hasDroppedRing) {
           setHasDroppedRing(true); setIsRolling(true); setShowScroll(false); setChoiceResult(null);
           setDrawnItem({ type: 'get_item', itemId: 'ring', text: '道具「結婚指輪」を獲得。\n効果は「仲間が一人いなくなる代わりに、次のターンから５ターンの間、10以下のダメージを与える際、追加で10ダメージを与える。」', id: Math.random().toString(36).substring(7) });
@@ -547,7 +547,6 @@
             await new Promise(r => setTimeout(r, 1500));
             setTextEffect(null);
             await new Promise(r => setTimeout(r, 200)); 
-          // 🔽 新しく追加した「カットイン」処理をキューで実行 🔽
           } else if (item.type === 'cutin') {
             setCutinEffect({ title: item.title, desc: item.desc, bgColor: item.bgColor, titleColor: item.titleColor });
             await new Promise(r => setTimeout(r, 3500));
@@ -697,7 +696,6 @@
 
         const result = applyDamageAndHealLogic(damageAmount, healAmount, isGigafile, logMsg);
         
-        // 🔽 変更：シマシマの服を渡した時に専用のカットインを発生させる 🔽
         if (isGiveShima) {
           result.effects.push({ 
             type: 'cutin', 
@@ -747,7 +745,6 @@
         });
         setStatuses(prev => [...prev.filter(s => s.id !== 'ring'), { id: 'ring', turns: 5 }]);
 
-        // 🔽 変更：キリンを犠牲にして「偽りのファミリー」を手に入れた時にカットインを発生させる 🔽
         if (companionId === 'companion_kirin') {
           addLog(`${ITEM_DEF[companionId].name}とお別れした...\n道具『偽りのファミリー』を獲得！`);
           setCutinEffect({
@@ -871,7 +868,7 @@
         "「それからひろろはおかしくなり、まるで何かに操られてるかのように、村を荒らし、人を襲うようになった、あんなに優しい若者だったのになぁ、、」",
         "「いま、ひろろはダンジョンの洞窟の中に住み着いている、どうかひろろを助けてくれないだろうか…」",
         "「カス！それでも人間か！」",
-        "「ありがとう。1人では心細いだろう、それでは何の役にも立たないかもしれないがキリンを一緒に連れて行くと良い」"
+        "「ありがとう。1人では心細いだろう、それでは何の役-にも立たないかもしれないがキリンを一緒に連れて行くと良い」"
       ];
 
       useEffect(() => {
@@ -897,10 +894,10 @@
           return (
             <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center font-dot relative p-4">
               <style>{`@import url('https://fonts.googleapis.com/css2?family=DotGothic16&display=swap'); .font-dot { font-family: 'DotGothic16', sans-serif; } .pixel-border { border: 4px solid white; border-radius: 8px; background-color: rgba(0,0,0,0.8); box-shadow: 4px 4px 0px #000; }`}</style>
-              <div className="pixel-border bg-gray-900 p-8 max-w-lg text-center flex flex-col items-center shadow-[0_0_30px_rgba(255,255,255,0.2)]">
-                <h2 className="text-yellow-300 text-2xl md:text-3xl font-bold mb-6 animate-bounce">仲間が加入した！</h2>
-                <p className="text-white mb-8 whitespace-pre-wrap leading-loose font-bold text-xl md:text-2xl text-yellow-100">『 キリン 』が仲間になった！<br/><br/>【 能力 】<br/>効果は、何も無い。</p>
-                <button onClick={handleNextIntro} className="pixel-border !bg-yellow-600 hover:!bg-yellow-500 text-white px-10 py-4 text-lg font-bold">冒険へ出発する</button>
+              <div className="pixel-border bg-gray-900 p-12 max-w-2xl text-center flex flex-col items-center shadow-[0_0_30px_rgba(255,255,255,0.2)]">
+                <h2 className="text-yellow-300 text-4xl font-bold mb-8 animate-bounce">仲間が加入した！</h2>
+                <p className="text-white mb-12 whitespace-pre-wrap leading-loose font-bold text-3xl text-yellow-100">『 キリン 』が仲間になった！<br/><br/>【 能力 】<br/>効果は、何も無い。</p>
+                <button onClick={handleNextIntro} className="pixel-border !bg-yellow-600 hover:!bg-yellow-500 text-white px-12 py-5 text-2xl font-bold">冒険へ出発する</button>
               </div>
             </div>
           );
@@ -909,17 +906,17 @@
         return (
           <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center font-dot relative p-4" onClick={handleIntroContainerClick}>
             <style>{`@import url('https://fonts.googleapis.com/css2?family=DotGothic16&display=swap'); .font-dot { font-family: 'DotGothic16', sans-serif; } .pixel-border { border: 4px solid white; border-radius: 8px; background-color: rgba(0,0,0,0.8); box-shadow: 4px 4px 0px #000; }`}</style>
-            <div className="pixel-border bg-gray-900 p-6 md:p-10 w-full max-w-2xl min-h-[200px] flex flex-col justify-between cursor-pointer">
-              <p className="text-lg md:text-xl leading-loose font-bold whitespace-pre-wrap">
+            <div className="pixel-border bg-gray-900 p-10 w-full max-w-3xl min-h-[300px] flex flex-col justify-between cursor-pointer">
+              <p className="text-2xl leading-loose font-bold whitespace-pre-wrap">
                 {displayedIntroText}<span className={isIntroTyping ? "animate-pulse text-gray-400" : "hidden"}>|</span>
               </p>
               {(introPhase === 5 || introPhase === 6) && !isIntroTyping && (
-                <div className="flex flex-col md:flex-row gap-4 mt-8 justify-center">
-                  <button onClick={(e) => { e.stopPropagation(); setIntroPhase(7); }} className="pixel-border !bg-blue-800 hover:!bg-blue-600 text-white px-6 py-3 font-bold">ひろろを助けに行く</button>
-                  <button onClick={(e) => { e.stopPropagation(); setIntroPhase(6); }} className="pixel-border !bg-gray-700 hover:!bg-gray-600 text-white px-6 py-3 font-bold">見捨てる</button>
+                <div className="flex gap-6 mt-12 justify-center">
+                  <button onClick={(e) => { e.stopPropagation(); setIntroPhase(7); }} className="pixel-border !bg-blue-800 hover:!bg-blue-600 text-white px-8 py-4 text-xl font-bold">ひろろを助けに行く</button>
+                  <button onClick={(e) => { e.stopPropagation(); setIntroPhase(6); }} className="pixel-border !bg-gray-700 hover:!bg-gray-600 text-white px-8 py-4 text-xl font-bold">見捨てる</button>
                 </div>
               )}
-              {introPhase !== 5 && introPhase !== 6 && !isIntroTyping && <div className="text-right mt-4 text-gray-400 animate-pulse">▼ つぎへ</div>}
+              {introPhase !== 5 && introPhase !== 6 && !isIntroTyping && <div className="text-right mt-6 text-gray-400 text-xl animate-pulse">▼ つぎへ</div>}
             </div>
           </div>
         );
@@ -928,9 +925,9 @@
       if (gameClear) {
         return (
           <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center font-dot relative">
-            <h1 className="text-3xl md:text-5xl text-yellow-400 mb-8 animate-bounce">GAME CLEAR!!</h1>
-            <p className="text-lg md:text-2xl text-center">すべてのモンスターを討伐し、<br/>ダンジョンに真の平和が訪れた！</p>
-            <button onClick={executeReset} className="mt-8 pixel-border !bg-blue-800 hover:!bg-blue-600 text-white px-6 py-2 md:px-8 md:py-3 text-sm md:text-base font-bold">最初から遊ぶ</button>
+            <h1 className="text-6xl text-yellow-400 mb-12 animate-bounce">GAME CLEAR!!</h1>
+            <p className="text-3xl text-center leading-loose">すべてのモンスターを討伐し、<br/>ダンジョンに真の平和が訪れた！</p>
+            <button onClick={executeReset} className="mt-12 pixel-border !bg-blue-800 hover:!bg-blue-600 text-white px-10 py-4 text-2xl font-bold">最初から遊ぶ</button>
           </div>
         );
       }
@@ -961,9 +958,8 @@
             .effect-popup { position: absolute; top: 30%; left: 50%; animation: popupFloat 2s ease-out forwards; z-index: 55; pointer-events: none; }
             @keyframes damagePopupAnim { 0% { opacity: 0; transform: translate(-50%, 0) scale(0.5); } 15% { opacity: 1; transform: translate(-50%, -20px) scale(1.2); } 30%, 80% { opacity: 1; transform: translate(-50%, -10px) scale(1); } 100% { opacity: 0; transform: translate(-50%, -50px) scale(0.8); } }
             .damage-popup-container { position: absolute; top: 35%; left: 50%; pointer-events: none; z-index: 150; animation: damagePopupAnim 1.5s ease-out forwards; }
-            .damage-number { font-size: 5rem; font-weight: 900; color: #ff3333; line-height: 1; text-shadow: 3px 3px 0 #fff, -3px -3px 0 #fff, 3px -3px 0 #fff, -3px 3px 0 #fff, 0 0 15px rgba(255,0,0,0.8); }
-            .heal-number { font-size: 5rem; font-weight: 900; color: #3b82f6; line-height: 1; text-shadow: 3px 3px 0 #fff, -3px -3px 0 #fff, 3px -3px 0 #fff, -3px 3px 0 #fff, 0 0 15px rgba(59,130,246,0.8); }
-            @media (min-width: 768px) { .damage-number, .heal-number { font-size: 7rem; } }
+            .damage-number { font-size: 7rem; font-weight: 900; color: #ff3333; line-height: 1; text-shadow: 3px 3px 0 #fff, -3px -3px 0 #fff, 3px -3px 0 #fff, -3px 3px 0 #fff, 0 0 15px rgba(255,0,0,0.8); }
+            .heal-number { font-size: 7rem; font-weight: 900; color: #3b82f6; line-height: 1; text-shadow: 3px 3px 0 #fff, -3px -3px 0 #fff, 3px -3px 0 #fff, -3px 3px 0 #fff, 0 0 15px rgba(59,130,246,0.8); }
             @keyframes doorOpenLeft { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
             @keyframes doorOpenRight { 0% { transform: translateX(0); } 100% { transform: translateX(100%); } }
             @keyframes doorLight { 0% { opacity: 0; box-shadow: 0 0 0px #fff; width: 0px; } 20% { opacity: 1; box-shadow: 0 0 20px #fff; width: 4px; } 100% { opacity: 1; box-shadow: 0 0 100px #fff; width: 100vw; } }
@@ -974,11 +970,10 @@
             .animate-fadeIn { animation: fadeIn 0.5s ease-out; }
             @keyframes treasureShake { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(-10deg); } 75% { transform: rotate(10deg); } }
             @keyframes treasureOpen { 0% { transform: scale(1); filter: brightness(1); } 100% { transform: scale(2); filter: brightness(2) drop-shadow(0 0 20px yellow); opacity: 0; } }
-            .treasure-box { font-size: 6rem; animation: treasureShake 0.5s infinite; transition: all 0.5s; cursor: default; user-select: none; }
+            .treasure-box { font-size: 8rem; animation: treasureShake 0.5s infinite; transition: all 0.5s; cursor: default; user-select: none; }
             .treasure-box.opening { animation: treasureOpen 1s forwards; }
             .pixel-border { border: 4px solid white; border-radius: 8px; background-color: rgba(0,0,0,0.8); box-shadow: 4px 4px 0px #000; }
             
-            /* 🔽 追加：全画面カットイン用のド派手アニメーション 🔽 */
             @keyframes cutinAnim {
               0% { transform: scale(0.5) translateY(50px); opacity: 0; }
               15% { transform: scale(1.1) translateY(0); opacity: 1; }
@@ -991,12 +986,11 @@
 
           {flashKey > 0 && <div key={flashKey} className="flash-overlay"></div>}
 
-          {/* 🔽 追加：全画面カットイン表示エリア 🔽 */}
           {cutinEffect && (
             <div className="absolute inset-0 z-[200] flex items-center justify-center bg-black/70">
-              <div className={`cutin-container pixel-border p-6 md:p-12 text-center flex flex-col items-center justify-center ${cutinEffect.bgColor} shadow-[0_0_50px_rgba(255,255,255,0.8)]`}>
-                <h1 className={`text-2xl md:text-4xl font-bold mb-6 drop-shadow-[0_0_10px_rgba(0,0,0,1)] ${cutinEffect.titleColor}`}>{cutinEffect.title}</h1>
-                <p className="text-white text-lg md:text-2xl font-bold whitespace-pre-wrap leading-relaxed drop-shadow-[0_0_5px_rgba(0,0,0,1)]">{cutinEffect.desc}</p>
+              <div className={`cutin-container pixel-border p-12 text-center flex flex-col items-center justify-center ${cutinEffect.bgColor} shadow-[0_0_50px_rgba(255,255,255,0.8)]`}>
+                <h1 className={`text-5xl font-bold mb-8 drop-shadow-[0_0_10px_rgba(0,0,0,1)] ${cutinEffect.titleColor}`}>{cutinEffect.title}</h1>
+                <p className="text-white text-3xl font-bold whitespace-pre-wrap leading-relaxed drop-shadow-[0_0_5px_rgba(0,0,0,1)]">{cutinEffect.desc}</p>
               </div>
             </div>
           )}
@@ -1007,7 +1001,7 @@
               <div className="door-left"></div>
               <div className="door-right"></div>
               <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
-                <p className="text-white font-bold text-3xl md:text-5xl animate-bounce drop-shadow-[0_0_10px_rgba(255,255,255,1)] tracking-widest">ゴゴゴゴゴ……</p>
+                <p className="text-white font-bold text-5xl animate-bounce drop-shadow-[0_0_10px_rgba(255,255,255,1)] tracking-widest">ゴゴゴゴゴ……</p>
               </div>
             </div>
           )}
@@ -1017,12 +1011,12 @@
               <div className={`treasure-box ${isOpeningTreasure ? 'opening' : ''}`}>
                 {isOpeningTreasure ? '✨' : '🎁'}
               </div>
-              {!isOpeningTreasure && <p className="text-white mt-8 font-bold text-xl animate-pulse">カチャッ...</p>}
+              {!isOpeningTreasure && <p className="text-white mt-10 font-bold text-3xl animate-pulse">カチャッ...</p>}
             </div>
           )}
 
           {textEffect && (
-            <div className={`effect-popup pixel-border px-6 py-4 text-center text-white font-bold text-lg md:text-xl whitespace-pre-wrap ${
+            <div className={`effect-popup pixel-border px-8 py-5 text-center text-white font-bold text-3xl whitespace-pre-wrap ${
               textEffect.style === 'shima' ? 'bg-purple-800/90 shadow-[0_0_20px_rgba(168,85,247,0.8)]' :
               textEffect.style === 'wakasa' ? 'bg-pink-800/90 shadow-[0_0_20px_rgba(236,72,153,0.8)]' :
               'bg-orange-800/90 shadow-[0_0_20px_rgba(251,146,60,0.8)]'
@@ -1038,58 +1032,58 @@
           )}
 
           {encounterStoryText && (
-            <div className="absolute inset-0 z-[80] flex items-center justify-center bg-black/60 p-4 font-dot" onClick={handleEncounterClick}>
-              <div className="pixel-border bg-gray-900 p-6 md:p-10 w-full max-w-2xl min-h-[150px] flex flex-col justify-between cursor-pointer shadow-[0_0_30px_rgba(255,255,255,0.2)]">
-                <p className="text-lg md:text-xl leading-loose font-bold whitespace-pre-wrap text-white">{encounterDisplayedText}<span className={isEncounterTyping ? "animate-pulse text-gray-400" : "hidden"}>|</span></p>
-                {!isEncounterTyping && <div className="text-right mt-4 text-gray-400 animate-pulse">▼ つぎへ</div>}
+            <div className="absolute inset-0 z-[80] flex items-center justify-center bg-black/60 p-6 font-dot" onClick={handleEncounterClick}>
+              <div className="pixel-border bg-gray-900 p-10 w-full max-w-3xl min-h-[200px] flex flex-col justify-between cursor-pointer shadow-[0_0_30px_rgba(255,255,255,0.2)]">
+                <p className="text-2xl leading-loose font-bold whitespace-pre-wrap text-white">{encounterDisplayedText}<span className={isEncounterTyping ? "animate-pulse text-gray-400" : "hidden"}>|</span></p>
+                {!isEncounterTyping && <div className="text-right mt-6 text-gray-400 text-xl animate-pulse">▼ つぎへ</div>}
               </div>
             </div>
           )}
 
           {farewellData && (
-            <div className="absolute inset-0 z-[130] flex items-center justify-center bg-black/80 p-4 font-dot" onClick={handleFarewellClick}>
-              <div className="pixel-border bg-gray-900 p-6 md:p-10 w-full max-w-2xl min-h-[150px] flex flex-col justify-between cursor-pointer shadow-[0_0_30px_rgba(255,255,255,0.2)]">
-                <p className="text-lg md:text-xl leading-loose font-bold whitespace-pre-wrap text-white">{farewellDisplayedText}<span className={isFarewellTyping ? "animate-pulse text-gray-400" : "hidden"}>|</span></p>
-                {!isFarewellTyping && <div className="text-right mt-4 text-gray-400 animate-pulse">▼ つぎへ</div>}
+            <div className="absolute inset-0 z-[130] flex items-center justify-center bg-black/80 p-6 font-dot" onClick={handleFarewellClick}>
+              <div className="pixel-border bg-gray-900 p-10 w-full max-w-3xl min-h-[200px] flex flex-col justify-between cursor-pointer shadow-[0_0_30px_rgba(255,255,255,0.2)]">
+                <p className="text-2xl leading-loose font-bold whitespace-pre-wrap text-white">{farewellDisplayedText}<span className={isFarewellTyping ? "animate-pulse text-gray-400" : "hidden"}>|</span></p>
+                {!isFarewellTyping && <div className="text-right mt-6 text-gray-400 text-xl animate-pulse">▼ つぎへ</div>}
               </div>
             </div>
           )}
 
           {postDefeatState && (
-            <div className="absolute inset-0 z-[110] bg-black/90 p-4 font-dot flex items-center justify-center" onClick={handlePostDefeatContainerClick}>
-              <div className={`pixel-border bg-gray-900 p-8 text-center flex flex-col items-center shadow-[0_0_30px_rgba(255,255,255,0.2)] ${postDefeatState.type.includes('story') || postDefeatState.type === 'treasure_opened' ? 'max-w-2xl w-full' : 'max-w-lg'}`}>
-                {postDefeatState.type === 'companion_joined' && <h2 className="text-yellow-300 text-2xl md:text-3xl font-bold mb-6 animate-bounce">仲間が加入した！</h2>}
-                <p className={`text-white mb-8 whitespace-pre-wrap leading-loose font-bold ${postDefeatState.type === 'companion_joined' || postDefeatState.type === 'treasure_opened' ? 'text-xl md:text-2xl text-yellow-100' : postDefeatState.type.includes('story') ? 'text-base md:text-xl text-left w-full' : 'text-xl'}`}>
+            <div className="absolute inset-0 z-[110] bg-black/90 p-6 font-dot flex items-center justify-center" onClick={handlePostDefeatContainerClick}>
+              <div className={`pixel-border bg-gray-900 p-10 text-center flex flex-col items-center shadow-[0_0_30px_rgba(255,255,255,0.2)] ${postDefeatState.type.includes('story') || postDefeatState.type === 'treasure_opened' ? 'max-w-3xl w-full' : 'max-w-2xl'}`}>
+                {postDefeatState.type === 'companion_joined' && <h2 className="text-yellow-300 text-4xl font-bold mb-8 animate-bounce">仲間が加入した！</h2>}
+                <p className={`text-white mb-10 whitespace-pre-wrap leading-loose font-bold ${postDefeatState.type === 'companion_joined' || postDefeatState.type === 'treasure_opened' ? 'text-3xl text-yellow-100' : postDefeatState.type.includes('story') ? 'text-2xl text-left w-full' : 'text-2xl'}`}>
                   {postDefeatDisplayedText}<span className={isPostDefeatTyping ? "animate-pulse text-gray-400" : "hidden"}>|</span>
                 </p>
 
                 {!isPostDefeatTyping && postDefeatState.type.startsWith('choice_') && (
-                  <div className="flex gap-6">
-                    <button onClick={() => handlePostDefeatChoice('yes')} className="pixel-border !bg-blue-800 hover:!bg-blue-600 text-white px-8 py-3 font-bold">YES</button>
-                    <button onClick={() => handlePostDefeatChoice('no')} className="pixel-border !bg-gray-700 hover:!bg-gray-600 text-white px-8 py-3 font-bold">NO</button>
+                  <div className="flex gap-8">
+                    <button onClick={() => handlePostDefeatChoice('yes')} className="pixel-border !bg-blue-800 hover:!bg-blue-600 text-white px-10 py-4 text-xl font-bold">YES</button>
+                    <button onClick={() => handlePostDefeatChoice('no')} className="pixel-border !bg-gray-700 hover:!bg-gray-600 text-white px-10 py-4 text-xl font-bold">NO</button>
                   </div>
                 )}
                 
                 {!isPostDefeatTyping && postDefeatState.type === 'companion_joined' && (
-                  <button onClick={() => { const nextIdx = postDefeatState.nextIdx; setPostDefeatState(null); moveToNextMonster(nextIdx); }} className="pixel-border !bg-yellow-600 hover:!bg-yellow-500 text-white px-10 py-4 text-lg font-bold">確認</button>
+                  <button onClick={() => { const nextIdx = postDefeatState.nextIdx; setPostDefeatState(null); moveToNextMonster(nextIdx); }} className="pixel-border !bg-yellow-600 hover:!bg-yellow-500 text-white px-12 py-5 text-2xl font-bold">確認</button>
                 )}
 
                 {!isPostDefeatTyping && !postDefeatState.type.startsWith('choice_') && postDefeatState.type !== 'companion_joined' && (
-                  <button onClick={() => handlePostDefeatChoice('next')} className="pixel-border !bg-green-700 hover:!bg-green-600 text-white px-8 py-3 font-bold">{postDefeatState.type.includes('story') || postDefeatState.type === 'treasure_opened' ? '次へ ▼' : 'すすむ'}</button>
+                  <button onClick={() => handlePostDefeatChoice('next')} className="pixel-border !bg-green-700 hover:!bg-green-600 text-white px-10 py-4 text-xl font-bold">{postDefeatState.type.includes('story') || postDefeatState.type === 'treasure_opened' ? '次へ ▼' : 'すすむ'}</button>
                 )}
               </div>
             </div>
           )}
 
           {showRingModal && (
-            <div className="absolute inset-0 z-[120] bg-black/90 p-4 font-dot flex items-center justify-center">
-              <div className="pixel-border bg-purple-900 p-8 max-w-sm text-center flex flex-col items-center">
-                <h3 className="text-yellow-300 text-xl font-bold mb-6">犠牲にする仲間を選んでください</h3>
-                <div className="flex flex-col gap-4 w-full">
-                  {inventory.includes('companion_wakasa') && <button onClick={() => executeRing('companion_wakasa')} className="pixel-border !bg-gray-800 hover:!bg-gray-600 text-white py-3 font-bold">わかさ</button>}
-                  {inventory.includes('companion_kuma') && <button onClick={() => executeRing('companion_kuma')} className="pixel-border !bg-gray-800 hover:!bg-gray-600 text-white py-3 font-bold">クマ</button>}
-                  {inventory.includes('companion_kirin') && <button onClick={() => executeRing('companion_kirin')} className="pixel-border !bg-gray-800 hover:!bg-gray-600 text-white py-3 font-bold">キリン</button>}
-                  <button onClick={() => setShowRingModal(false)} className="pixel-border !bg-gray-700 hover:!bg-gray-600 text-white py-3 font-bold mt-4">やめる</button>
+            <div className="absolute inset-0 z-[120] bg-black/90 p-6 font-dot flex items-center justify-center">
+              <div className="pixel-border bg-purple-900 p-10 max-w-lg w-full text-center flex flex-col items-center">
+                <h3 className="text-yellow-300 text-2xl font-bold mb-8">犠牲にする仲間を選んでください</h3>
+                <div className="flex flex-col gap-6 w-full">
+                  {inventory.includes('companion_wakasa') && <button onClick={() => executeRing('companion_wakasa')} className="pixel-border !bg-gray-800 hover:!bg-gray-600 text-white py-4 text-xl font-bold">わかさ</button>}
+                  {inventory.includes('companion_kuma') && <button onClick={() => executeRing('companion_kuma')} className="pixel-border !bg-gray-800 hover:!bg-gray-600 text-white py-4 text-xl font-bold">クマ</button>}
+                  {inventory.includes('companion_kirin') && <button onClick={() => executeRing('companion_kirin')} className="pixel-border !bg-gray-800 hover:!bg-gray-600 text-white py-4 text-xl font-bold">キリン</button>}
+                  <button onClick={() => setShowRingModal(false)} className="pixel-border !bg-gray-700 hover:!bg-gray-600 text-white py-4 text-xl font-bold mt-6">やめる</button>
                 </div>
               </div>
             </div>
@@ -1099,150 +1093,150 @@
 
           {showAppearance && (
             <div className="absolute inset-0 z-[70] flex items-center justify-center pointer-events-none">
-              <div className="bg-black/90 border-y-4 border-white w-full py-8 flex justify-center animate-encounter shadow-[0_0_30px_rgba(0,0,0,0.8)]">
-                <h1 className="text-3xl md:text-5xl font-bold text-white tracking-widest text-shadow-glow text-center leading-normal">{displayMonsterName}<br/>が現れた！</h1>
+              <div className="bg-black/90 border-y-8 border-white w-full py-12 flex justify-center animate-encounter shadow-[0_0_40px_rgba(0,0,0,0.8)]">
+                <h1 className="text-6xl font-bold text-white tracking-widest text-shadow-glow text-center leading-normal">{displayMonsterName}<br/>が現れた！</h1>
               </div>
             </div>
           )}
 
           {showShimaIntro && (
-            <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/80 p-4 font-dot">
-              <div className="pixel-border bg-purple-900/90 p-6 flex flex-col items-center max-w-md text-center shadow-[0_0_20px_rgba(168,85,247,0.5)]">
-                <h2 className="text-yellow-300 text-xl font-bold mb-4">【特殊状態：長寿の知恵】</h2>
-                <p className="text-white mb-6 leading-relaxed text-sm md:text-base">シマシマハゲは登場から10ターンの間、<br/>受けるダメージを <span className="text-red-300 font-bold text-lg">50%の確率で半減</span> させる！</p>
-                <button onClick={() => setShowShimaIntro(false)} className="pixel-border !bg-blue-800 hover:!bg-blue-600 text-white px-8 py-2 font-bold">確認</button>
+            <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/80 p-6 font-dot">
+              <div className="pixel-border bg-purple-900/90 p-10 flex flex-col items-center max-w-2xl w-full text-center shadow-[0_0_30px_rgba(168,85,247,0.5)]">
+                <h2 className="text-yellow-300 text-3xl font-bold mb-6">【特殊状態：長寿の知恵】</h2>
+                <p className="text-white mb-8 leading-relaxed text-xl">シマシマハゲは登場から10ターンの間、<br/>受けるダメージを <span className="text-red-300 font-bold text-2xl">50%の確率で半減</span> させる！</p>
+                <button onClick={() => setShowShimaIntro(false)} className="pixel-border !bg-blue-800 hover:!bg-blue-600 text-white px-10 py-4 text-xl font-bold">確認</button>
               </div>
             </div>
           )}
 
           {showKingIntro && (
-            <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/80 p-4 font-dot">
-              <div className="pixel-border bg-red-900/90 p-6 flex flex-col items-center max-w-md text-center shadow-[0_0_20px_rgba(239,68,68,0.5)]">
-                <h2 className="text-yellow-300 text-xl font-bold mb-4">【猿人王の特殊能力】</h2>
-                <p className="text-white mb-6 leading-relaxed text-sm md:text-base">猿人王はHPが50%以下になると、<br/>一度だけ <span className="text-pink-300 font-bold text-lg">『リアコの召喚』</span> を発動する！</p>
-                <button onClick={() => setShowKingIntro(false)} className="pixel-border !bg-blue-800 hover:!bg-blue-600 text-white px-8 py-2 font-bold">確認</button>
+            <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/80 p-6 font-dot">
+              <div className="pixel-border bg-red-900/90 p-10 flex flex-col items-center max-w-2xl w-full text-center shadow-[0_0_30px_rgba(239,68,68,0.5)]">
+                <h2 className="text-yellow-300 text-3xl font-bold mb-6">【猿人王の特殊能力】</h2>
+                <p className="text-white mb-8 leading-relaxed text-xl">猿人王はHPが50%以下になると、<br/>一度だけ <span className="text-pink-300 font-bold text-2xl">『リアコの召喚』</span> を発動する！</p>
+                <button onClick={() => setShowKingIntro(false)} className="pixel-border !bg-blue-800 hover:!bg-blue-600 text-white px-10 py-4 text-xl font-bold">確認</button>
               </div>
             </div>
           )}
 
           {showNorikoIntro && (
-            <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/80 p-4 font-dot">
-              <div className="pixel-border bg-pink-900/90 p-6 flex flex-col items-center max-w-md text-center shadow-[0_0_20px_rgba(244,114,182,0.5)]">
-                <h2 className="text-yellow-300 text-xl font-bold mb-4">【のりこちゃん 出現】</h2>
-                <p className="text-white mb-6 leading-relaxed text-sm md:text-base">のりこちゃんがいる間、<br/>ガチャの結果は強制的に<br/><span className="text-yellow-200 font-bold text-lg">「１ダメージを与える」</span> になる！</p>
-                <button onClick={() => setShowNorikoIntro(false)} className="pixel-border !bg-blue-800 hover:!bg-blue-600 text-white px-8 py-2 font-bold">確認</button>
+            <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/80 p-6 font-dot">
+              <div className="pixel-border bg-pink-900/90 p-10 flex flex-col items-center max-w-2xl w-full text-center shadow-[0_0_30px_rgba(244,114,182,0.5)]">
+                <h2 className="text-yellow-300 text-3xl font-bold mb-6">【のりこちゃん 出現】</h2>
+                <p className="text-white mb-8 leading-relaxed text-xl">のりこちゃんがいる間、<br/>ガチャの結果は強制的に<br/><span className="text-yellow-200 font-bold text-2xl">「１ダメージを与える」</span> になる！</p>
+                <button onClick={() => setShowNorikoIntro(false)} className="pixel-border !bg-blue-800 hover:!bg-blue-600 text-white px-10 py-4 text-xl font-bold">確認</button>
               </div>
             </div>
           )}
 
-          <div className="flex-1 bg-dungeon flex flex-col items-center justify-center relative p-2 md:p-4">
-            <div className="absolute top-2 left-2 md:top-4 md:left-4 pixel-border p-2 md:p-4 min-w-[140px] md:min-w-[200px] max-h-[40vh] overflow-y-auto z-10">
-              <h2 className="text-yellow-300 mb-1 md:mb-2 border-b-2 border-gray-500 text-sm md:text-base sticky top-0 bg-black/80">ステータス情報</h2>
-              <div className="text-xs md:text-sm">
-                <p className="text-gray-400">【 発生中の効果 】</p>
+          <div className="flex-1 bg-dungeon flex flex-col items-center justify-center relative p-6">
+            <div className="absolute top-4 left-4 pixel-border p-5 min-w-[280px] max-h-[40vh] overflow-y-auto z-10">
+              <h2 className="text-yellow-300 mb-3 border-b-2 border-gray-500 text-xl font-bold sticky top-0 bg-black/80">ステータス情報</h2>
+              <div className="text-lg space-y-2">
+                <p className="text-gray-400 text-base">【 発生中の効果 】</p>
                 {statuses.length > 0 ? statuses.map((st, idx) => (
-                  <div key={idx} className={STATUS_DEF[st.id].isEquip ? "text-green-300" : "text-red-300"}>{STATUS_DEF[st.id].isEquip ? '装備品' : '状態'}『{STATUS_DEF[st.id].name}』<br/>(残: {st.turns}T)</div>
+                  <div key={idx} className={STATUS_DEF[st.id].isEquip ? "text-green-300" : "text-red-300"}>{STATUS_DEF[st.id].isEquip ? '装備品' : '状態'}『{STATUS_DEF[st.id].name}』<br/><span className="text-base">(残: {st.turns}T)</span></div>
                 )) : <p>なし</p>}
                 {monsterIndex === 6 && shimaTurns > 0 && !isNorikoActive && (
-                  <div className="text-purple-400 mt-2">特殊『長寿の知恵』<br/>(残: {shimaTurns}T)<br/><span className="text-[10px] text-gray-300">※被ダメ時50%で半減</span></div>
+                  <div className="text-purple-400 mt-4">特殊『長寿の知恵』<br/><span className="text-base">(残: {shimaTurns}T)</span><br/><span className="text-sm text-gray-300">※被ダメ時50%で半減</span></div>
                 )}
               </div>
             </div>
 
-            <div className="text-center z-10 flex flex-col items-center mt-12 md:mt-10">
-              <div className="mb-2 md:mb-4 bg-black/60 px-3 py-1 md:px-4 md:py-2 rounded pixel-border">
-                <h2 className={`text-lg md:text-2xl ${monsterIndex >= 5 ? 'text-red-400 font-bold' : 'text-white'}`}>{displayMonsterName}</h2>
-                <div className="w-48 md:w-64 bg-gray-700 h-5 md:h-6 mt-1 md:mt-2 rounded border border-white relative overflow-hidden">
+            <div className="text-center z-10 flex flex-col items-center mt-16">
+              <div className="mb-6 bg-black/60 px-6 py-3 rounded pixel-border">
+                <h2 className={`text-3xl ${monsterIndex >= 5 ? 'text-red-400 font-bold' : 'text-white'}`}>{displayMonsterName}</h2>
+                <div className="w-96 bg-gray-700 h-8 mt-3 rounded border-2 border-white relative overflow-hidden">
                   <div className="h-full bg-green-500 transition-all duration-500" style={{ width: `${(displayHp / displayMaxHp) * 100}%` }}></div>
-                  <span className="absolute inset-0 flex items-center justify-center text-xs md:text-sm drop-shadow-md">HP: {displayHp} / {displayMaxHp}</span>
+                  <span className="absolute inset-0 flex items-center justify-center text-lg font-bold drop-shadow-md">HP: {displayHp} / {displayMaxHp}</span>
                 </div>
               </div>
               
               <div className={`relative ${isDefeated ? 'defeat-anim' : (monsterIndex >= 5 ? 'boss-anim' : 'enemy-anim')}`}>
-                <div className="w-56 h-56 md:w-96 md:h-96 relative cursor-pointer flex justify-center items-center drop-shadow-2xl" onClick={handleMonsterTap}>
-                  <img src={displayImage} alt={displayMonsterName} className="w-full h-full object-contain select-none pointer-events-none drop-shadow-[0_0_15px_rgba(0,0,0,0.8)]" onError={(e) => { e.target.src = 'https://via.placeholder.com/400x400/222/fff?text=Monster'; }} />
+                <div className="w-[400px] h-[400px] relative cursor-pointer flex justify-center items-center drop-shadow-2xl" onClick={handleMonsterTap}>
+                  <img src={displayImage} alt={displayMonsterName} className="w-full h-full object-contain select-none pointer-events-none drop-shadow-[0_0_20px_rgba(0,0,0,0.8)]" onError={(e) => { e.target.src = 'https://via.placeholder.com/400x400/222/fff?text=Monster'; }} />
                 </div>
-                {monsterIndex >= 5 && !isDefeated && !isNorikoActive && <div className="absolute -inset-4 border-4 border-red-500/50 rounded-xl animate-ping pointer-events-none"></div>}
+                {monsterIndex >= 5 && !isDefeated && !isNorikoActive && <div className="absolute -inset-6 border-8 border-red-500/50 rounded-2xl animate-ping pointer-events-none"></div>}
               </div>
             </div>
           </div>
 
-          <div className="absolute top-2 right-2 md:top-4 md:right-4 pixel-border p-2 md:p-3 w-48 md:w-64 h-24 md:h-32 overflow-hidden text-xs md:text-sm opacity-80 pointer-events-none flex flex-col z-30">
-            {log.map((l, i) => <div key={i} className={i === 0 ? 'text-white font-bold' : 'text-gray-400'}>{l}</div>)}
+          <div className="absolute top-4 right-4 pixel-border p-4 w-80 h-48 overflow-hidden text-base opacity-80 pointer-events-none flex flex-col z-30 space-y-1">
+            {log.map((l, i) => <div key={i} className={i === 0 ? 'text-white font-bold text-lg' : 'text-gray-400'}>{l}</div>)}
           </div>
 
-          <div className="bg-black border-t-4 border-white p-4 md:p-6 flex flex-col items-center z-20">
+          <div className="bg-black border-t-8 border-white p-8 flex flex-col items-center z-20">
             {!drawnItem && !isRolling && !isDefeated && !isWarning && !showShimaIntro && !postDefeatState && !encounterStoryText && !farewellData && !showDoorEffect && !showTreasureEffect && (
-              <div className="flex flex-col items-center gap-2">
-                <div className="flex gap-4">
-                  <button disabled={isProcessingQueue || cutinEffect} onClick={() => setShowInventory(true)} className="px-4 py-3 md:px-6 md:py-4 bg-green-800 hover:bg-green-600 disabled:opacity-50 border-2 border-white rounded shadow-[0_0_15px_rgba(34,197,94,0.5)] text-base md:text-xl font-bold transition-all active:scale-95 flex items-center gap-2">
+              <div className="flex flex-col items-center gap-4">
+                <div className="flex gap-6">
+                  <button disabled={isProcessingQueue || cutinEffect} onClick={() => setShowInventory(true)} className="px-8 py-5 bg-green-800 hover:bg-green-600 disabled:opacity-50 border-4 border-white rounded shadow-[0_0_20px_rgba(34,197,94,0.5)] text-2xl font-bold transition-all active:scale-95 flex items-center gap-3">
                     道具を使う
-                    {inventory.length > 0 && <span className="bg-red-600 text-white text-xs px-2 py-1 rounded-full">{inventory.length}</span>}
+                    {inventory.length > 0 && <span className="bg-red-600 text-white text-base px-3 py-1 rounded-full">{inventory.length}</span>}
                   </button>
-                  <button disabled={isProcessingQueue || cutinEffect} onClick={handleDrawGacha} className="px-6 py-3 md:px-8 md:py-4 bg-blue-800 hover:bg-blue-600 disabled:opacity-50 border-2 border-white rounded shadow-[0_0_15px_rgba(59,130,246,0.5)] text-lg md:text-xl font-bold transition-all active:scale-95">
+                  <button disabled={isProcessingQueue || cutinEffect} onClick={handleDrawGacha} className="px-10 py-5 bg-blue-800 hover:bg-blue-600 disabled:opacity-50 border-4 border-white rounded shadow-[0_0_20px_rgba(59,130,246,0.5)] text-2xl font-bold transition-all active:scale-95">
                     １回引く
                   </button>
                 </div>
-                <div className="mt-2 text-gray-400 text-xs md:text-sm">ガチャ残り: {gachaPool.length} 回</div>
+                <div className="mt-2 text-gray-400 text-lg">ガチャ残り: <span className="text-white font-bold">{gachaPool.length}</span> 回</div>
               </div>
             )}
-            {isRolling && <div className="text-lg md:text-xl text-yellow-300 animate-pulse py-3 md:py-4">巻物を開いている...</div>}
+            {isRolling && <div className="text-3xl text-yellow-300 animate-pulse py-6 font-bold">巻物を開いている...</div>}
           </div>
 
           {showScroll && drawnItem && (
-            <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 p-6">
-              <div className="relative w-full max-w-lg p-8 md:p-12 scroll-open font-sans text-[#311e0e] old-paper rounded-sm">
-                <div className="absolute -left-4 md:-left-6 top-[-16px] bottom-[-16px] w-6 md:w-8 rounded-sm shadow-[8px_0_15px_rgba(0,0,0,0.8)] border-y-[6px] border-black bg-gradient-to-r from-[#1a0a02] via-[#4a2610] to-[#1a0a02] z-20"></div>
-                <div className="absolute -right-4 md:-right-6 top-[-16px] bottom-[-16px] w-6 md:w-8 rounded-sm shadow-[-8px_0_15px_rgba(0,0,0,0.8)] border-y-[6px] border-black bg-gradient-to-l from-[#1a0a02] via-[#4a2610] to-[#1a0a02] z-20"></div>
+            <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 p-8">
+              <div className="relative w-full max-w-2xl p-16 scroll-open font-sans text-[#311e0e] old-paper rounded-sm">
+                <div className="absolute -left-6 top-[-20px] bottom-[-20px] w-8 rounded-sm shadow-[8px_0_15px_rgba(0,0,0,0.8)] border-y-[8px] border-black bg-gradient-to-r from-[#1a0a02] via-[#4a2610] to-[#1a0a02] z-20"></div>
+                <div className="absolute -right-6 top-[-20px] bottom-[-20px] w-8 rounded-sm shadow-[-8px_0_15px_rgba(0,0,0,0.8)] border-y-[8px] border-black bg-gradient-to-l from-[#1a0a02] via-[#4a2610] to-[#1a0a02] z-20"></div>
                 
-                <div className="relative z-10 text-center font-bold text-base md:text-2xl leading-relaxed whitespace-pre-wrap min-h-[80px] md:min-h-[100px] flex items-center justify-center border-b-[3px] border-[#5c3a21]/30 pb-4 mb-4 md:pb-6 md:mb-6 tracking-wider" style={{ textShadow: '1px 1px 0px rgba(255,255,255,0.2)' }}>
+                <div className="relative z-10 text-center font-bold text-3xl leading-relaxed whitespace-pre-wrap min-h-[120px] flex items-center justify-center border-b-[4px] border-[#5c3a21]/30 pb-8 mb-8 tracking-wider" style={{ textShadow: '1px 1px 0px rgba(255,255,255,0.2)' }}>
                   <span>{displayedText}<span className={isTyping ? "animate-pulse" : "hidden"}>|</span></span>
                 </div>
 
-                <div className={`relative z-10 flex flex-col items-center gap-3 md:gap-4 transition-opacity duration-500 ${(!isScrollOpened || isTyping) ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+                <div className={`relative z-10 flex flex-col items-center gap-6 transition-opacity duration-500 ${(!isScrollOpened || isTyping) ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
                   
                   {actionSummary ? (
-                    <button disabled={isProcessingQueue} onClick={() => handleActionStep2()} className="pixel-border !bg-blue-800 hover:!bg-blue-600 disabled:opacity-50 text-white px-8 py-3 text-lg font-bold">すすむ</button>
+                    <button disabled={isProcessingQueue} onClick={() => handleActionStep2()} className="pixel-border !bg-blue-800 hover:!bg-blue-600 disabled:opacity-50 text-white px-12 py-4 text-2xl font-bold">すすむ</button>
                   ) : (
                     <>
                       {['damage', 'damage_box', 'heal_box', 'get_item', 'noriko_force'].includes(drawnItem.type) && (
-                        <button disabled={isProcessingQueue} onClick={() => handleActionStep1()} className="pixel-border !bg-blue-800 hover:!bg-blue-600 disabled:opacity-50 text-white px-6 py-2 md:px-8 md:py-3 text-base md:text-lg font-bold">すすむ</button>
+                        <button disabled={isProcessingQueue} onClick={() => handleActionStep1()} className="pixel-border !bg-blue-800 hover:!bg-blue-600 disabled:opacity-50 text-white px-10 py-4 text-2xl font-bold">すすむ</button>
                       )}
 
                       {['special_likes', 'special_likes_reduce'].includes(drawnItem.type) && (
                         <div className="w-full">
-                          <p className="text-center mb-2 text-sm md:text-base font-bold">何個言えた？</p>
-                          <div className="flex justify-center gap-2 flex-wrap mb-2">
+                          <p className="text-center mb-4 text-xl font-bold">何個言えた？</p>
+                          <div className="flex justify-center gap-4 flex-wrap mb-4">
                             {[0,1,2,3,4,5].map(num => (
-                              <button disabled={isProcessingQueue} key={num} onClick={() => handleActionStep1(num)} className="pixel-border !bg-gray-800 hover:!bg-gray-600 disabled:opacity-50 text-white w-10 h-10 md:w-12 md:h-12 text-lg md:text-xl">{num}</button>
+                              <button disabled={isProcessingQueue} key={num} onClick={() => handleActionStep1(num)} className="pixel-border !bg-gray-800 hover:!bg-gray-600 disabled:opacity-50 text-white w-16 h-16 text-3xl font-bold">{num}</button>
                             ))}
                           </div>
                         </div>
                       )}
 
                       {drawnItem.type === 'event_boxG' && (
-                        <div className="flex gap-4 md:gap-6">
-                          <button disabled={isProcessingQueue} onClick={() => handleActionStep1('success')} className="pixel-border !bg-green-700 hover:!bg-green-600 disabled:opacity-50 text-white px-4 py-2 md:px-6 md:py-3 text-sm md:text-base font-bold">成功</button>
-                          <button disabled={isProcessingQueue} onClick={() => handleActionStep1('fail')} className="pixel-border !bg-red-700 hover:!bg-red-600 disabled:opacity-50 text-white px-4 py-2 md:px-6 md:py-3 text-sm md:text-base font-bold">失敗</button>
+                        <div className="flex gap-8">
+                          <button disabled={isProcessingQueue} onClick={() => handleActionStep1('success')} className="pixel-border !bg-green-700 hover:!bg-green-600 disabled:opacity-50 text-white px-10 py-4 text-xl font-bold">成功</button>
+                          <button disabled={isProcessingQueue} onClick={() => handleActionStep1('fail')} className="pixel-border !bg-red-700 hover:!bg-red-600 disabled:opacity-50 text-white px-10 py-4 text-xl font-bold">失敗</button>
                         </div>
                       )}
 
                       {drawnItem.type === 'event_appA' && (
-                        <div className="flex flex-col items-center gap-3 md:gap-4 w-full">
+                        <div className="flex flex-col items-center gap-6 w-full">
                           {!appAState.isActive ? (
-                            <button disabled={isProcessingQueue} onClick={startAppAGame} className="pixel-border !bg-blue-800 hover:!bg-blue-600 disabled:opacity-50 text-white px-6 py-2 md:px-8 md:py-3 text-sm md:text-base font-bold">
+                            <button disabled={isProcessingQueue} onClick={startAppAGame} className="pixel-border !bg-blue-800 hover:!bg-blue-600 disabled:opacity-50 text-white px-10 py-4 text-xl font-bold">
                               ゲーム開始
                             </button>
                           ) : (
                             <div className="w-full flex flex-col items-center animate-fadeIn">
-                              <p className="text-xl md:text-2xl font-bold mb-4 text-[#5c3a21]">現在のダメージ: {appAState.totalDamage}</p>
-                              <div className="flex justify-center gap-2 md:gap-4">
+                              <p className="text-3xl font-bold mb-6 text-[#5c3a21]">現在のダメージ: {appAState.totalDamage}</p>
+                              <div className="flex justify-center gap-6">
                                 {appAState.cards.map((card, index) => (
                                   <button 
                                     key={index} 
                                     disabled={appAState.isAnimating || appAState.revealedCardIndex !== null}
                                     onClick={() => handleAppACardClick(index)}
-                                    className={`w-14 h-20 md:w-20 md:h-28 pixel-border text-xl md:text-2xl font-bold transition-all duration-300 flex items-center justify-center ${
+                                    className={`w-24 h-36 pixel-border text-3xl font-bold transition-all duration-300 flex items-center justify-center ${
                                       appAState.revealedCardIndex === index 
                                         ? (card === 'END' ? '!bg-red-700 text-white scale-110' : '!bg-green-600 text-white scale-110') 
                                         : '!bg-blue-900 text-yellow-300 hover:!bg-blue-700 hover:-translate-y-2'
@@ -1252,9 +1246,9 @@
                                   </button>
                                 ))}
                               </div>
-                              <div className="min-h-[2rem] mt-4">
+                              <div className="min-h-[3rem] mt-6">
                                 {appAState.revealedCardIndex !== null && (
-                                  <p className="text-lg md:text-xl font-bold text-red-800 animate-pulse">
+                                  <p className="text-2xl font-bold text-red-800 animate-pulse">
                                     {appAState.cards[appAState.revealedCardIndex] === 'END' 
                                       ? 'END！ゲーム終了！' 
                                       : `${appAState.cards[appAState.revealedCardIndex]} ダメージ追加！`}
@@ -1267,13 +1261,13 @@
                       )}
 
                       {drawnItem.type === 'choice_firework' && (
-                        <div className="flex gap-4 md:gap-6">
+                        <div className="flex gap-8">
                           {choiceResult ? (
-                            <button disabled={isProcessingQueue} onClick={() => handleActionStep1(choiceResult.action)} className="pixel-border !bg-blue-800 hover:!bg-blue-600 disabled:opacity-50 text-white px-6 py-2 md:px-8 md:py-3 text-base md:text-lg font-bold">すすむ</button>
+                            <button disabled={isProcessingQueue} onClick={() => handleActionStep1(choiceResult.action)} className="pixel-border !bg-blue-800 hover:!bg-blue-600 disabled:opacity-50 text-white px-10 py-4 text-2xl font-bold">すすむ</button>
                           ) : (
                             <>
-                              <button disabled={isProcessingQueue} onClick={() => handleChoice('yes')} className="pixel-border !bg-yellow-600 hover:!bg-yellow-500 disabled:opacity-50 text-white px-6 py-2 md:px-8 md:py-3 text-sm md:text-base font-bold">YES</button>
-                              <button disabled={isProcessingQueue} onClick={() => handleChoice('no')} className="pixel-border !bg-gray-700 hover:!bg-gray-600 disabled:opacity-50 text-white px-6 py-2 md:px-8 md:py-3 text-sm md:text-base font-bold">NO</button>
+                              <button disabled={isProcessingQueue} onClick={() => handleChoice('yes')} className="pixel-border !bg-yellow-600 hover:!bg-yellow-500 disabled:opacity-50 text-white px-10 py-4 text-xl font-bold">YES</button>
+                              <button disabled={isProcessingQueue} onClick={() => handleChoice('no')} className="pixel-border !bg-gray-700 hover:!bg-gray-600 disabled:opacity-50 text-white px-10 py-4 text-xl font-bold">NO</button>
                             </>
                           )}
                         </div>
@@ -1285,52 +1279,52 @@
             </div>
           )}
 
-          <button disabled={isProcessingQueue || cutinEffect} onClick={() => setShowResetConfirm(true)} className="absolute bottom-2 right-2 md:bottom-4 md:right-4 pixel-border !bg-red-900 hover:!bg-red-700 text-white px-3 py-1 text-xs opacity-70 z-30 disabled:opacity-30">
+          <button disabled={isProcessingQueue || cutinEffect} onClick={() => setShowResetConfirm(true)} className="absolute bottom-4 right-4 pixel-border !bg-red-900 hover:!bg-red-700 text-white px-5 py-3 text-lg opacity-70 z-30 disabled:opacity-30">
             リセット
           </button>
 
           {showResetConfirm && (
-            <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 font-dot">
-              <div className="pixel-border bg-gray-900 p-6 flex flex-col items-center max-w-sm">
-                <p className="text-white mb-6 text-sm md:text-base text-center leading-relaxed">進行状況をリセットして<br/>最初からやり直しますか？</p>
-                <div className="flex gap-4">
-                  <button onClick={executeReset} className="pixel-border !bg-red-700 hover:!bg-red-600 text-white px-6 py-2 text-sm md:text-base">はい</button>
-                  <button onClick={() => setShowResetConfirm(false)} className="pixel-border !bg-gray-700 hover:!bg-gray-600 text-white px-6 py-2 text-sm md:text-base">いいえ</button>
+            <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/80 p-6 font-dot">
+              <div className="pixel-border bg-gray-900 p-10 flex flex-col items-center max-w-lg w-full">
+                <p className="text-white mb-8 text-xl text-center leading-relaxed font-bold">進行状況をリセットして<br/>最初からやり直しますか？</p>
+                <div className="flex gap-8">
+                  <button onClick={executeReset} className="pixel-border !bg-red-700 hover:!bg-red-600 text-white px-10 py-4 text-xl font-bold">はい</button>
+                  <button onClick={() => setShowResetConfirm(false)} className="pixel-border !bg-gray-700 hover:!bg-gray-600 text-white px-10 py-4 text-xl font-bold">いいえ</button>
                 </div>
               </div>
             </div>
           )}
 
           {showInventory && (
-            <div className="absolute inset-0 z-[80] flex items-center justify-center bg-black/80 p-4 font-dot">
-              <div className="pixel-border bg-gray-900 w-full max-w-md p-4 max-h-[80vh] flex flex-col shadow-[0_0_20px_rgba(34,197,94,0.4)]">
-                <h2 className="text-green-300 text-xl font-bold mb-4 border-b border-gray-600 pb-2">どうぐ・仲間</h2>
+            <div className="absolute inset-0 z-[80] flex items-center justify-center bg-black/80 p-6 font-dot">
+              <div className="pixel-border bg-gray-900 w-full max-w-2xl p-8 max-h-[80vh] flex flex-col shadow-[0_0_30px_rgba(34,197,94,0.4)]">
+                <h2 className="text-green-300 text-3xl font-bold mb-6 border-b-2 border-gray-600 pb-4">どうぐ・仲間</h2>
                 {inventory.length === 0 ? (
-                  <p className="text-gray-400 text-center py-10 text-lg">どうぐを もっていない</p>
+                  <p className="text-gray-400 text-center py-16 text-2xl font-bold">どうぐを もっていない</p>
                 ) : (
-                  <div className="overflow-y-auto flex-1 mb-4 flex flex-col gap-2 p-1">
+                  <div className="overflow-y-auto flex-1 mb-6 flex flex-col gap-4 p-2">
                     {inventory.map((itemId, idx) => (
-                      <button key={idx} onClick={() => setSelectedItemIndex(idx)} className="text-left px-4 py-3 border-2 border-gray-600 hover:border-white hover:bg-gray-700 bg-gray-800 text-white rounded font-bold text-lg transition-colors">{ITEM_DEF[itemId].name}</button>
+                      <button key={idx} onClick={() => setSelectedItemIndex(idx)} className="text-left px-6 py-5 border-4 border-gray-600 hover:border-white hover:bg-gray-700 bg-gray-800 text-white rounded font-bold text-2xl transition-colors">{ITEM_DEF[itemId].name}</button>
                     ))}
                   </div>
                 )}
-                <button onClick={() => { setShowInventory(false); setSelectedItemIndex(null); }} className="pixel-border !bg-gray-700 hover:!bg-gray-600 text-white py-3 w-full mt-auto font-bold text-lg">とじる</button>
+                <button onClick={() => { setShowInventory(false); setSelectedItemIndex(null); }} className="pixel-border !bg-gray-700 hover:!bg-gray-600 text-white py-5 w-full mt-auto font-bold text-2xl">とじる</button>
               </div>
             </div>
           )}
 
           {selectedItemIndex !== null && (
-            <div className="absolute inset-0 z-[90] flex items-center justify-center bg-black/90 p-4 font-dot">
-              <div className="pixel-border bg-blue-900/90 w-full max-w-sm p-6 flex flex-col items-center text-center shadow-[0_0_30px_rgba(59,130,246,0.5)]">
-                <h3 className="text-yellow-300 text-2xl font-bold mb-4 border-b border-blue-400 pb-2 w-full">{ITEM_DEF[inventory[selectedItemIndex]].name}</h3>
-                <p className="text-white mb-8 leading-relaxed text-lg">{ITEM_DEF[inventory[selectedItemIndex]].desc}</p>
-                <div className="flex gap-6 w-full justify-center">
+            <div className="absolute inset-0 z-[90] flex items-center justify-center bg-black/90 p-6 font-dot">
+              <div className="pixel-border bg-blue-900/90 w-full max-w-2xl p-10 flex flex-col items-center text-center shadow-[0_0_40px_rgba(59,130,246,0.5)]">
+                <h3 className="text-yellow-300 text-4xl font-bold mb-6 border-b-2 border-blue-400 pb-4 w-full">{ITEM_DEF[inventory[selectedItemIndex]].name}</h3>
+                <p className="text-white mb-10 leading-relaxed text-2xl font-bold">{ITEM_DEF[inventory[selectedItemIndex]].desc}</p>
+                <div className="flex gap-8 w-full justify-center">
                   {ITEM_DEF[inventory[selectedItemIndex]].type !== 'companion' && (
-                    <button onClick={() => handleUseItem(selectedItemIndex)} className="pixel-border !bg-green-700 hover:!bg-green-600 text-white px-8 py-3 font-bold text-lg">
+                    <button onClick={() => handleUseItem(selectedItemIndex)} className="pixel-border !bg-green-700 hover:!bg-green-600 text-white px-10 py-4 font-bold text-2xl">
                       {inventory[selectedItemIndex] === 'shima_cloth' && monsterIndex === 6 ? '渡す' : '使う'}
                     </button>
                   )}
-                  <button onClick={() => setSelectedItemIndex(null)} className="pixel-border !bg-gray-700 hover:!bg-gray-600 text-white px-8 py-3 font-bold text-lg">戻る</button>
+                  <button onClick={() => setSelectedItemIndex(null)} className="pixel-border !bg-gray-700 hover:!bg-gray-600 text-white px-10 py-4 font-bold text-2xl">戻る</button>
                 </div>
               </div>
             </div>
@@ -1345,3 +1339,5 @@
   </script>
 </body>
 </html>
+
+```
