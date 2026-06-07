@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>hiroro</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
@@ -1131,29 +1131,29 @@
             </div>
           )}
 
-          {/* 中央コンテンツ部分: 上下のボックスとの干渉を防ぐため pt-[160px] で調整 */}
-          <div className="flex-1 bg-dungeon flex flex-col items-center justify-start relative p-6 pt-[160px]">
+          {/* 中央コンテンツ部分: 上下のボックスとの干渉を防ぐため pt-[180px] で調整 */}
+          <div className="flex-1 bg-dungeon flex flex-col items-center justify-start relative p-6 pt-[180px]">
             
             {/* 左上のステータス情報ボックス (スクロールとポインター操作を有効化) */}
-            <div className="absolute top-4 left-4 pixel-border p-4 w-[280px] h-[30vh] overflow-y-auto z-20 pointer-events-auto bg-black/80">
-              <h2 className="text-yellow-300 mb-3 border-b-2 border-gray-500 text-xl font-bold sticky top-0 bg-black">ステータス情報</h2>
-              <div className="text-lg space-y-2 pb-2">
-                <p className="text-gray-400 text-base">【 発生中の効果 】</p>
+            <div className="absolute top-4 left-4 pixel-border p-3 w-[46%] max-w-[340px] h-[15vh] min-h-[140px] overflow-y-auto z-20 pointer-events-auto bg-black/80">
+              <h2 className="text-yellow-300 mb-2 border-b-2 border-gray-500 text-lg font-bold sticky top-0 bg-black">ステータス情報</h2>
+              <div className="text-base space-y-1 pb-2">
+                <p className="text-gray-400 text-sm">【 発生中の効果 】</p>
                 {statuses.length > 0 ? statuses.map((st, idx) => (
-                  <div key={idx} className={STATUS_DEF[st.id].isEquip ? "text-green-300" : "text-red-300"}>{STATUS_DEF[st.id].isEquip ? '装備品' : '状態'}『{STATUS_DEF[st.id].name}』<br/><span className="text-base">(残: {st.turns}T)</span></div>
+                  <div key={idx} className={STATUS_DEF[st.id].isEquip ? "text-green-300" : "text-red-300"}>{STATUS_DEF[st.id].isEquip ? '装備品' : '状態'}『{STATUS_DEF[st.id].name}』<br/><span className="text-sm">(残: {st.turns}T)</span></div>
                 )) : <p>なし</p>}
                 {monsterIndex === 6 && shimaTurns > 0 && !isNorikoActive && (
-                  <div className="text-purple-400 mt-4">特殊『長寿の知恵』<br/><span className="text-base">(残: {shimaTurns}T)</span><br/><span className="text-sm text-gray-300">※被ダメ時50%で半減</span></div>
+                  <div className="text-purple-400 mt-2">特殊『長寿の知恵』<br/><span className="text-sm">(残: {shimaTurns}T)</span><br/><span className="text-xs text-gray-300">※被ダメ時50%で半減</span></div>
                 )}
               </div>
             </div>
 
             {/* 右上のログ(履歴)ボックス: 左のステータス情報とサイズ・デザインを統一し、スクロール可能に */}
-            <div className="absolute top-4 right-4 pixel-border p-4 w-[280px] h-[30vh] overflow-y-auto z-20 pointer-events-auto bg-black/80 flex flex-col space-y-2">
-              <h2 className="text-yellow-300 mb-3 border-b-2 border-gray-500 text-xl font-bold sticky top-0 bg-black">履歴（ログ）</h2>
-              <div className="flex flex-col space-y-2 pb-2">
+            <div className="absolute top-4 right-4 pixel-border p-3 w-[46%] max-w-[340px] h-[15vh] min-h-[140px] overflow-y-auto z-20 pointer-events-auto bg-black/80 flex flex-col space-y-1">
+              <h2 className="text-yellow-300 mb-2 border-b-2 border-gray-500 text-lg font-bold sticky top-0 bg-black">履歴（ログ）</h2>
+              <div className="flex flex-col space-y-1 pb-2">
                 {log.map((l, i) => (
-                  <div key={i} className={`text-lg ${i === 0 ? 'text-white font-bold' : 'text-gray-400'}`}>
+                  <div key={i} className={`text-base ${i === 0 ? 'text-white font-bold' : 'text-gray-400'}`}>
                     {l}
                   </div>
                 ))}
@@ -1170,7 +1170,6 @@
               </div>
               
               <div className={`relative ${isDefeated ? 'defeat-anim' : (monsterIndex >= 5 ? 'boss-anim' : 'enemy-anim')}`}>
-                {/* モンスター画像のサイズをちょうど良いサイズに調整 */}
                 <div className="w-[320px] h-[320px] relative cursor-pointer flex justify-center items-center drop-shadow-2xl" onClick={handleMonsterTap}>
                   <img src={displayImage} alt={displayMonsterName} className="w-full h-full object-contain select-none pointer-events-none drop-shadow-[0_0_20px_rgba(0,0,0,0.8)]" onError={(e) => { e.target.src = 'https://via.placeholder.com/400x400/222/fff?text=Monster'; }} />
                 </div>
