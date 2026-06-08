@@ -96,7 +96,12 @@
 
       add(5, { type: 'special_likes', text: '特殊ダメージ。ひろろの好きな所を最大５個言う。\n（1つにつき2ダメージ与える）' });
       add(5, { type: 'special_likes_reduce', text: '特殊ダメージ10を与える。ひろろが対象者の好きな所を最大5個言う。\n（1つにつき1軽減する）', baseDamage: 10 });
-      add(3, { type: 'event_boxG', text: 'イベント発生。箱Gを開ける。\n成功でHP全回復。失敗でHP半減。', box: 'G' });
+      
+      // 型抜きチャレンジを3種類に分ける
+      add(1, { type: 'event_boxG', id_suffix: 1, text: 'イベント発生。箱Gを開ける。\n成功でHP全回復。失敗でHP半減。', box: 'G' });
+      add(1, { type: 'event_boxG', id_suffix: 2, text: 'イベント発生。箱Gを開ける。\n成功でカメムシ３匹。失敗でビンタ20回。', box: 'G' });
+      add(1, { type: 'event_boxG', id_suffix: 3, text: 'イベント発生。箱Gを開ける。\n成功で20ダメージを与える。失敗でカメムシ5匹。', box: 'G' });
+
       add(2, { type: 'event_appA', text: 'イベント発生。カード引きゲームを行い、ENDが出るまで引き続け、出た合計のダメージを与える。' });
       
       add(1, { type: 'choice_firework', id_suffix: 2, text: 'ドキドキの二択。花火を投げる？' });
@@ -449,6 +454,25 @@
         }, 1500); 
       };
 
+      const handleChoice = (actionValue) => {
+        let resultText = ''; const sid = drawnItem.id_suffix;
+        if (drawnItem.type === 'choice_firework') {
+          if (sid === 1) resultText = actionValue === 'yes' ? '装備品『モンキーランス』を獲得した！\n（次のターンから5ターンの間、与えるダメージが2倍になる）' : '敵のHPが10回復した...';
+          else if (sid === 2) resultText = actionValue === 'yes' ? 'ひろろは喜んだ！' : '敵のHPが10回復した...';
+          else if (sid === 3) resultText = actionValue === 'yes' ? '装備品『呪いのテディベア』を獲得した！\n（次のターンから5ターンの間、毎ターン5ダメージを与える）' : '敵のHPが20回復した...';
+          else if (sid === 4) resultText = actionValue === 'yes' ? '装備品『西成の紋章』を獲得した！\n（次のターンから5ターンの間、敵は回復できない）' : '敵のHPが20回復した...';
+          else if (sid === 5) resultText = actionValue === 'yes' ? '敵を毒状態にした！\n（次のターンから5ターンの間、毎ターン5ダメージを与える）' : '敵のHPが20回復した...';
+          else if (sid === 6) resultText = actionValue === 'yes' ? '敵を麻痺状態にした！\n（次のターンから5ターンの間、敵は回復できない）' : '敵のHPが全回復した...';
+          else if (sid === 7) resultText = actionValue === 'no' ? '敵を麻痺状態にした！\n（次のターンから5ターンの間、敵は回復できない）' : '敵のHPが全回復した...';
+          else if (sid === 8) resultText = actionValue === 'yes' ? 'ひろろは変顔をした！' : '敵のHPが全回復した...';
+        } else if (drawnItem.type === 'event_boxG') {
+          if (sid === 1) resultText = actionValue === 'success' ? '型抜きチャレンジ成功！\n敵のHPが全回復した...！' : '型抜きチャレンジ失敗！\n敵のHPを半減させた！';
+          else if (sid === 2) resultText = actionValue === 'success' ? '型抜きチャレンジ成功！\nカメムシ３匹！' : '型抜きチャレンジ失敗！\nビンタ20回！';
+          else if (sid === 3) resultText = actionValue === 'success' ? '型抜きチャレンジ成功！\n20ダメージ！' : '型抜きチャレンジ失敗！\nカメムシ5匹！';
+        }
+        setChoiceResult({ action: actionValue, text: resultText });
+      };
+
       const handleActionStep1 = (actionValue = null) => {
         if (!drawnItem || isProcessingQueue) return;
 
@@ -478,8 +502,16 @@
         else if (type === 'special_likes') { damageAmount = actionValue * 2; baseLogMsg = `${actionValue}個言えた！${damageAmount}のダメージ！`; }
         else if (type === 'special_likes_reduce') { damageAmount = baseDamage - actionValue; baseLogMsg = `${actionValue}個言えた！ダメージが${damageAmount}に軽減された！`; }
         else if (type === 'event_boxG') {
-          if (actionValue === 'success') { healAmount = 9999; baseLogMsg = `成功！しかし敵のHPが全回復してしまった...！`; }
-          else { damageAmount = Math.ceil(hp / 2); baseLogMsg = `失敗...敵のHPを半減させた！(${damageAmount}ダメージ)`; }
+          if (id_suffix === 1) {
+            if (actionValue === 'success') { healAmount = 9999; baseLogMsg = `成功！しかし敵のHPが全回復してしまった...！`; }
+            else { damageAmount = Math.ceil(hp / 2); baseLogMsg = `失敗...敵のHPを半減させた！(${damageAmount}ダメージ)`; }
+          } else if (id_suffix === 2) {
+            if (actionValue === 'success') { baseLogMsg = `成功！カメムシを３匹投げつけた！(効果なし)`; }
+            else { damageAmount = 20; baseLogMsg = `失敗...ビンタ20回！(20ダメージ)`; }
+          } else if (id_suffix === 3) {
+            if (actionValue === 'success') { damageAmount = 20; baseLogMsg = `成功！20ダメージを与えた！`; }
+            else { baseLogMsg = `失敗...カメムシを5匹投げつけた！(効果なし)`; }
+          }
         } else if (type === 'event_appA') { 
           damageAmount = parseInt(actionValue) || 0; 
           baseLogMsg = `カードゲームの結果、${damageAmount}のダメージを与えた！`; 
@@ -509,10 +541,10 @@
           if (result.netChange >= 9999) summaryText += `【 敵のHPが全回復してしまった... 】`;
           else summaryText += `【 敵のHPが ${result.netChange} 回復した... 】`;
         } else {
-          if (['damage', 'damage_box', 'special_likes', 'special_likes_reduce'].includes(type) || (type==='event_boxG'&&actionValue==='fail') || type==='event_appA') summaryText += `【 ダメージを与えられなかった... 】`;
+          if (['damage', 'damage_box', 'special_likes', 'special_likes_reduce'].includes(type) || (type==='event_boxG'&&['fail', 'success'].includes(actionValue)) || type==='event_appA') summaryText += `【 ダメージを与えられなかった... 】`;
           else summaryText += `【 変化はなかった... 】`;
         }
-        if (type === 'get_item' || (type === 'choice_firework' && result.breakdown.length === 0)) summaryText = baseLogMsg;
+        if (type === 'get_item' || (type === 'choice_firework' && result.breakdown.length === 0) || (type === 'event_boxG' && result.breakdown.length === 0)) summaryText = baseLogMsg;
 
         const summaryData = {
           isNoriko: false, netChange: result.netChange, effects: result.effects,
@@ -680,19 +712,6 @@
           setShimaTurns(prev => prev - 1);
           if (shimaTurns - 1 === 0) addLog("特殊状態『長寿の知恵』の効果が切れた。");
         }
-      };
-
-      const handleChoice = (actionValue) => {
-        let resultText = ''; const sid = drawnItem.id_suffix;
-        if (sid === 1) resultText = actionValue === 'yes' ? '装備品『モンキーランス』を獲得した！\n（次のターンから5ターンの間、与えるダメージが2倍になる）' : '敵のHPが10回復した...';
-        else if (sid === 2) resultText = actionValue === 'yes' ? 'ひろろは喜んだ！' : '敵のHPが10回復した...';
-        else if (sid === 3) resultText = actionValue === 'yes' ? '装備品『呪いのテディベア』を獲得した！\n（次のターンから5ターンの間、毎ターン5ダメージを与える）' : '敵のHPが20回復した...';
-        else if (sid === 4) resultText = actionValue === 'yes' ? '装備品『西成の紋章』を獲得した！\n（次のターンから5ターンの間、敵は回復できない）' : '敵のHPが20回復した...';
-        else if (sid === 5) resultText = actionValue === 'yes' ? '敵を毒状態にした！\n（次のターンから5ターンの間、毎ターン5ダメージを与える）' : '敵のHPが20回復した...';
-        else if (sid === 6) resultText = actionValue === 'yes' ? '敵を麻痺状態にした！\n（次のターンから5ターンの間、敵は回復できない）' : '敵のHPが全回復した...';
-        else if (sid === 7) resultText = actionValue === 'no' ? '敵を麻痺状態にした！\n（次のターンから5ターンの間、敵は回復できない）' : '敵のHPが全回復した...';
-        else if (sid === 8) resultText = actionValue === 'yes' ? 'ひろろは変顔をした！' : '敵のHPが全回復した...';
-        setChoiceResult({ action: actionValue, text: resultText });
       };
 
       const handleUseItem = (index) => {
@@ -1259,8 +1278,14 @@
 
                       {drawnItem.type === 'event_boxG' && (
                         <div className="flex gap-8">
-                          <button disabled={isProcessingQueue} onClick={() => handleActionStep1('success')} className="pixel-border !bg-green-700 hover:!bg-green-600 disabled:opacity-50 text-white px-10 py-4 text-xl font-bold">成功</button>
-                          <button disabled={isProcessingQueue} onClick={() => handleActionStep1('fail')} className="pixel-border !bg-red-700 hover:!bg-red-600 disabled:opacity-50 text-white px-10 py-4 text-xl font-bold">失敗</button>
+                          {choiceResult ? (
+                            <button disabled={isProcessingQueue} onClick={() => handleActionStep1(choiceResult.action)} className="pixel-border !bg-blue-800 hover:!bg-blue-600 disabled:opacity-50 text-white px-10 py-4 text-2xl font-bold">すすむ</button>
+                          ) : (
+                            <>
+                              <button disabled={isProcessingQueue} onClick={() => handleChoice('success')} className="pixel-border !bg-green-700 hover:!bg-green-600 disabled:opacity-50 text-white px-10 py-4 text-xl font-bold">成功</button>
+                              <button disabled={isProcessingQueue} onClick={() => handleChoice('fail')} className="pixel-border !bg-red-700 hover:!bg-red-600 disabled:opacity-50 text-white px-10 py-4 text-xl font-bold">失敗</button>
+                            </>
+                          )}
                         </div>
                       )}
 
