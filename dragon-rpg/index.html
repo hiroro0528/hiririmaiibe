@@ -22,8 +22,8 @@
       { id: 2, name: '爆走板チャリ女', maxHp: 40, image: 'public/images/itatyarionnna.png' },
       { id: 3, name: 'ラマザル', maxHp: 50, image: 'public/images/ramasaru.png' },
       { id: 4, name: '猿ゴーレム', maxHp: 60, image: 'public/images/sarugo-remu.png' },
-      { id: 5, name: '脳筋クマ', maxHp: 80, image: 'public/images/noukinkuma.png' },
-      { id: 6, name: '猿人王', maxHp: 100, image: 'public/images/enzinou.png' },
+      { id: 5, name: '脳筋クマ', maxHp: 100, image: 'public/images/noukinkuma.png' },
+      { id: 6, name: '猿人王', maxHp: 150, image: 'public/images/enzinou.png' },
       { id: 7, name: 'シマシマハゲ', maxHp: 200, image: 'public/images/simasimahage.png' },
     ];
 
@@ -77,6 +77,7 @@
       add(10, { type: 'damage', text: '物理攻撃で５ダメージ与えた。ビンタ５回。', damage: 5 });
       add(10, { type: 'damage', text: '物理攻撃で10ダメージ与えた。ビンタ10回。', damage: 10 });
       add(5, { type: 'damage', text: '物理攻撃で15ダメージ与えた。ビンタ15回。', damage: 15 });
+      add(5, { type: 'damage', text: '物理攻撃で20ダメージ与えた。ビンタ20回。', damage: 20 });
       add(3, { type: 'damage_box', text: '魔法攻撃で20ダメージ与えた。箱Bを開ける。', damage: 20, box: 'B' });
       add(5, { type: 'damage_box', text: '魔法攻撃で15ダメージ与えた。箱Aを開ける。', damage: 15, box: 'A' });
       add(2, { type: 'damage_box', text: '罠にはめて25ダメージ与えた。箱Cを開ける。', damage: 25, box: 'C' });
@@ -84,6 +85,7 @@
       add(4, { type: 'heal_box', text: '敵は食事をして30回復した。箱Hを開ける。', heal: 30, box: 'H' });
       add(2, { type: 'heal_box', text: '敵は保存食を食べて20回復した。箱Iを開ける。', heal: 20, box: 'I' });
       add(2, { type: 'heal_box', text: '敵は保存食を食べて15回復した。箱Jを開ける。', heal: 15, box: 'J' });
+      add(3, { type: 'heal_box', text: '敵は保存食を食べて7回復した。カメムシ7匹。', heal: 15});
       add(7, { type: 'damage_box', text: '罠にはめて15ダメージ与えた。箱Eを開ける。', damage: 15, box: 'E' });
       add(4, { type: 'damage_box', text: '毒を盛って10ダメージ与えた。箱Fを開ける。', damage: 10, box: 'F' });
       
