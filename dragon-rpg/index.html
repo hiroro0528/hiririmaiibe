@@ -42,7 +42,8 @@
       poison: { name: '毒状態', isEquip: false },
       paralysis: { name: '麻痺状態', isEquip: false },
       modoku: { name: '猛毒状態', isEquip: false },
-      ring: { name: '結婚指輪の誓い', isEquip: true }
+      ring: { name: '結婚指輪の誓い', isEquip: true },
+      shibutoi: { name: '回復不能', isEquip: false }
     };
 
     const ITEM_DEF = {
@@ -171,6 +172,8 @@
       const [hasGivenShimaCloth, setHasGivenShimaCloth] = useState(saveData?.hasGivenShimaCloth ?? false);
       const [monsterMaxHpModifier, setMonsterMaxHpModifier] = useState(saveData?.monsterMaxHpModifier ?? 0);
 
+      const [hasUsedShibutoiHage, setHasUsedShibutoiHage] = useState(saveData?.hasUsedShibutoiHage ?? false);
+
       const [showInventory, setShowInventory] = useState(false);
       const [selectedItemIndex, setSelectedItemIndex] = useState(null);
 
@@ -290,18 +293,51 @@
         setTapCount((prev) => {
           const newCount = prev + 1;
           if (newCount >= 10) {
-            addLog(`【裏技】10連続タップで${displayMonsterName}を一撃で倒した！`);
-            triggerDamageFlash();
-            setPopupEffect({ val: isNorikoActive ? norikoHp : hp, type: 'damage', key: Math.random() });
-            setTimeout(() => setPopupEffect(null), 1500);
-
+            
             if (isNorikoActive) {
+              addLog(`【裏技】10連続タップで${displayMonsterName}を一撃で倒した！`);
+              triggerDamageFlash();
+              setPopupEffect({ val: norikoHp, type: 'damage', key: Math.random() });
+              setTimeout(() => setPopupEffect(null), 1500);
+
               setNorikoHp(0);
               setIsNorikoActive(false);
               addLog("のりこちゃんを倒した！\n猿人王が再び立ちはだかる！");
             } else {
-              setHp(0);
-              handleDefeat();
+              if (monsterIndex === 6 && !hasUsedShibutoiHage && gachaPool.length >= 20) {
+                const isSuper = gachaPool.length >= 30;
+                const healAmount = isSuper ? 150 : 100;
+                setHasUsedShibutoiHage(true);
+                addLog(`【裏技】10連続タップで倒した！...と思いきや！？`);
+                triggerDamageFlash();
+                setPopupEffect({ val: hp, type: 'damage', key: Math.random() });
+                
+                setIsProcessingQueue(true);
+                setTimeout(() => {
+                  setPopupEffect(null);
+                  setCutinEffect({
+                    title: '👨‍🦲 しぶといハゲ 👨‍🦲',
+                    desc: `【 隠しスキル発動！ 】\nHPを ${healAmount} 回復する！\n但し、今後一切回復できない！`,
+                    bgColor: 'bg-red-900/90',
+                    titleColor: 'text-yellow-300'
+                  });
+                  setHp(healAmount);
+                  updateStatuses({ id: 'shibutoi', turns: 9999 }, false, true);
+                  addLog(`【隠しスキル】しぶといハゲが発動！HP${healAmount}回復＆回復無効！`);
+                  setTimeout(() => {
+                    setCutinEffect(null);
+                    setIsProcessingQueue(false);
+                  }, 3500);
+                }, 1500);
+              } else {
+                addLog(`【裏技】10連続タップで${displayMonsterName}を一撃で倒した！`);
+                triggerDamageFlash();
+                setPopupEffect({ val: hp, type: 'damage', key: Math.random() });
+                setTimeout(() => setPopupEffect(null), 1500);
+
+                setHp(0);
+                handleDefeat();
+              }
             }
             return 0;
           }
@@ -352,10 +388,10 @@
           monsterIndex, hp, gachaPool, boxCounts, statuses, shimaTurns, inventory, gameClear, log, 
           isNorikoActive, norikoHp, hasSummonedNoriko, hasSeenIntro, introPhase, totalGachaCount, 
           ringDropTarget, hasDroppedRing, shimaDropTarget, hasDroppedShima, 
-          hasGivenShimaCloth, monsterMaxHpModifier 
+          hasGivenShimaCloth, monsterMaxHpModifier, hasUsedShibutoiHage
         };
         localStorage.setItem('dungeon_rpg_save', JSON.stringify(dataToSave));
-      }, [monsterIndex, hp, gachaPool, boxCounts, statuses, shimaTurns, inventory, gameClear, log, isNorikoActive, norikoHp, hasSummonedNoriko, hasSeenIntro, introPhase, totalGachaCount, ringDropTarget, hasDroppedRing, shimaDropTarget, hasDroppedShima, hasGivenShimaCloth, monsterMaxHpModifier]);
+      }, [monsterIndex, hp, gachaPool, boxCounts, statuses, shimaTurns, inventory, gameClear, log, isNorikoActive, norikoHp, hasSummonedNoriko, hasSeenIntro, introPhase, totalGachaCount, ringDropTarget, hasDroppedRing, shimaDropTarget, hasDroppedShima, hasGivenShimaCloth, monsterMaxHpModifier, hasUsedShibutoiHage]);
 
       const executeReset = () => {
         localStorage.removeItem('dungeon_rpg_save');
@@ -373,6 +409,7 @@
         setActionSummary(null); setPopupEffect(null); setShowDoorEffect(false); setIsProcessingQueue(false);
         setAppAState({ isActive: false, totalDamage: 0, cards: [], revealedCardIndex: null, isAnimating: false });
         setHasGivenShimaCloth(false); setMonsterMaxHpModifier(0); setShowTreasureEffect(false); setIsOpeningTreasure(false);
+        setHasUsedShibutoiHage(false);
         setCutinEffect(null);
       };
       
@@ -383,7 +420,6 @@
         }
       }, [monsterIndex, hasSeenIntro]);
 
-      // ログの保持件数を50件に増やし、スクロールで遡れるようにする
       const addLog = (msg) => setLog(prev => [msg, ...prev].slice(0, 50));
       const hasStatus = (id) => statuses.some(s => s.id === id && s.turns > 0);
 
@@ -570,13 +606,34 @@
         let nextHp = payload.isNoriko 
           ? Math.max(0, norikoHp + payload.netChange) 
           : Math.min(currentMonster.maxHp + monsterMaxHpModifier, Math.max(0, hp + payload.netChange));
+
+        let isShibutoiHageTriggered = false;
+        let shibutoiHeal = 0;
+        if (!payload.isNoriko && monsterIndex === 6 && nextHp === 0 && !hasUsedShibutoiHage && gachaPool.length >= 20) {
+          isShibutoiHageTriggered = true;
+          shibutoiHeal = gachaPool.length >= 30 ? 150 : 100;
+          nextHp = shibutoiHeal;
+        }
         
         payload.nextHp = nextHp;
+        payload.isShibutoiHageTriggered = isShibutoiHageTriggered;
 
         const queue = [];
         if (payload.effects && payload.effects.length > 0) payload.effects.forEach(eff => queue.push(eff));
         if (payload.netChange < 0) queue.push({ type: 'number', val: Math.abs(payload.netChange), isDamage: true });
         else if (payload.netChange > 0) queue.push({ type: 'number', val: payload.netChange, isDamage: false });
+
+        if (isShibutoiHageTriggered) {
+          queue.push({ 
+            type: 'cutin', 
+            title: '👨‍🦲 しぶといハゲ 👨‍🦲', 
+            desc: `【 隠しスキル発動！ 】\nHPを ${shibutoiHeal} 回復する！\n但し、今後一切回復できない！`,
+            bgColor: 'bg-red-900/90',
+            titleColor: 'text-yellow-300'
+          });
+          queue.push({ type: 'number', val: shibutoiHeal, isDamage: false });
+        }
+
         queue.push({ type: 'apply_hp', newHp: nextHp });
 
         executeQueue(queue, payload);
@@ -616,12 +673,18 @@
           if (payload.logMsg) addLog(payload.logMsg);
           updateStatuses(payload.newStatus, payload.clearStatus);
 
+          if (payload.isShibutoiHageTriggered) {
+            setHasUsedShibutoiHage(true);
+            updateStatuses({ id: 'shibutoi', turns: 9999 }, false, true);
+            addLog(`【隠しスキル】しぶといハゲが発動！HP${payload.nextHp}回復＆回復無効！`);
+          }
+
           if (monsterIndex === 5 && !hasSummonedNoriko && payload.nextHp <= 50 && payload.nextHp > 0) {
             setIsNorikoActive(true); setHasSummonedNoriko(true); setNorikoHp(5);
             addLog("猿人王は『リアコの召喚』を発動した！\nのりこちゃんが現れた！");
             setTimeout(() => setShowNorikoIntro(true), 1500); 
           }
-          if (payload.nextHp === 0) handleDefeat();
+          if (payload.nextHp === 0 && !payload.isShibutoiHageTriggered) handleDefeat();
         }
 
         setChoiceResult(null); setDrawnItem(null); setActionSummary(null);
@@ -666,7 +729,7 @@
             logMsgs.push(`(偽りのファミリーの効果で全回復が10回復になった！)`);
           }
 
-          if (hasStatus('nishinari') || hasStatus('paralysis')) {
+          if (hasStatus('nishinari') || hasStatus('paralysis') || hasStatus('shibutoi')) {
             heal = 0; breakdown.push(`状態異常(回復無効): 0`);
             logMsgs.push(`(しかし回復できない状態だ！)`);
           }
@@ -688,7 +751,7 @@
         return { netChange, breakdown, effects, logMsg: logMsgs.join('\n') };
       };
 
-      const updateStatuses = (newStatusObj, clearStatus = false) => {
+      const updateStatuses = (newStatusObj, clearStatus = false, skipLog = false) => {
         setStatuses(prev => {
           let current = prev;
           if (clearStatus) {
@@ -704,7 +767,7 @@
           return nextStatuses;
         });
 
-        if (newStatusObj) {
+        if (newStatusObj && !skipLog) {
           const statusId = typeof newStatusObj === 'string' ? newStatusObj : newStatusObj.id;
           const turns = typeof newStatusObj === 'string' ? 5 : newStatusObj.turns;
           addLog(`${STATUS_DEF[statusId].name}が付与された！(${turns}T)`);
@@ -761,14 +824,34 @@
         setSelectedItemIndex(null); setShowInventory(false);
 
         let nextHp = Math.min(currentMonster.maxHp + (isGiveShima ? 100 : monsterMaxHpModifier), Math.max(0, hp + result.netChange));
-        
+
+        let isShibutoiHageTriggered = false;
+        let shibutoiHeal = 0;
+        if (monsterIndex === 6 && nextHp <= 0 && !hasUsedShibutoiHage && gachaPool.length >= 20) {
+          isShibutoiHageTriggered = true;
+          shibutoiHeal = gachaPool.length >= 30 ? 150 : 100;
+          nextHp = shibutoiHeal;
+        }
+
         const queue = [];
         if (result.effects.length > 0) result.effects.forEach(eff => queue.push(eff));
         if (result.netChange < 0) queue.push({ type: 'number', val: Math.abs(result.netChange), isDamage: true });
         else if (result.netChange > 0) queue.push({ type: 'number', val: result.netChange, isDamage: false });
+
+        if (isShibutoiHageTriggered) {
+          queue.push({ 
+            type: 'cutin', 
+            title: '👨‍🦲 しぶといハゲ 👨‍🦲', 
+            desc: `【 隠しスキル発動！ 】\nHPを ${shibutoiHeal} 回復する！\n但し、今後一切回復できない！`,
+            bgColor: 'bg-red-900/90',
+            titleColor: 'text-yellow-300'
+          });
+          queue.push({ type: 'number', val: shibutoiHeal, isDamage: false });
+        }
+
         queue.push({ type: 'apply_hp', newHp: nextHp });
 
-        executeQueue(queue, { isNoriko: false, netChange: result.netChange, nextHp, logMsg: result.logMsg, newStatus: newStatusObj, clearStatus });
+        executeQueue(queue, { isNoriko: false, netChange: result.netChange, nextHp, logMsg: result.logMsg, newStatus: newStatusObj, clearStatus, isShibutoiHageTriggered });
       };
 
       const executeRing = (companionId) => {
