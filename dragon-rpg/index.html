@@ -282,7 +282,7 @@
           setShowAppearance(false);
           if (idx === 1) setEncounterStoryText("キリン\n「あれは、わかさ？！なんでこんな所に、でも様子がおかしい、、まさか、、、ワクチンで直せるかも」");
           else if (idx === 4) setEncounterStoryText("わかさ\n「あれはクマちゃん？いつもより筋肉の量が少なくなってるけどモンスター化してるらしい、、」");
-          else if (idx === 5) setEncounterStoryText("わかさ\n「私のひろろ！見るも無残な姿に…待っててね！今私が助けるから！あぁん///」");
+          else if (idx === 5) setEncounterStoryText("わかさ\n「私のひろろ！見るも無残な姿に…私のキスでなおるかしら…待っててね！今私が助けるから！あぁん///」");
         }, 2500);
       };
 
@@ -859,7 +859,7 @@
         let text = "";
         if (companionId === 'companion_wakasa') text = "わかさ\n「ごめん、私はここまでみたい…。\nひろろのこと、絶対助けてあげてね！」";
         else if (companionId === 'companion_kuma') text = "クマ\n「グルル…\n（自分の筋肉を信じて進め…さらばだ！）」";
-        else if (companionId === 'companion_kirin') text = "キリン\n「……\n（何も言わずに静かに去っていった）」";
+        else if (companionId === 'companion_kirin') text = "キリン\n嫌だぁぁぁ……\n（跡形もなく蒸発した）」";
         setFarewellData({ companionId, text });
       };
 
@@ -912,7 +912,7 @@
             setPostDefeatState({ type: 'king_defeat', text: '猿人王を討伐した！\nワクチンを使用し、ひろろが正常に戻った。' });
           } else if (monsterIndex === 6) {
             if (hasGivenShimaCloth) {
-              setPostDefeatState({ type: 'maakun_final_story_1', text: "まーくん\n「まさか貴様らに負けるとは、、、皆には悪いことをしたな、さっきくれたシマシマの服のポケットに宝箱のカギが入っている、すぐそこに宝箱があるから開けて持ち帰るとよい、長く生きろよ、みんな」\n\nまーくんは死んだ。" });
+              setPostDefeatState({ type: 'maakun_final_story_1', text: "まーくん\n「まさか貴様らに負けるとは、、、皆には悪いことをしたな、さっきくれたシマシマの服のポケットに宝箱のカギが入っている、すぐそこに宝箱があるからわかさかひろろが開けて持ち帰るとよい、長く生きろよ、みんな」\n\nまーくんは死んだ。" });
             } else {
               setPostDefeatState({ type: 'ending_story_1', text: "激闘の末、まーくんは静かに倒れ伏した。\n彼の中の狂気は消え、ダンジョンを覆っていた邪悪な気配も霧散していく…" });
             }
@@ -947,9 +947,9 @@
         } else if (postDefeatState.type === 'maakun_story_1') {
           setPostDefeatState({ type: 'maakun_story_2', text: "わかさ\n「んっ///」" }); return;
         } else if (postDefeatState.type === 'maakun_story_2') {
-          setPostDefeatState({ type: 'maakun_story_3', text: "まーくん\n「見つかってしまったか。バレてしまったのなら教えてやろう。みんなも知ってると思うがワシは寿命でもう時期死ぬところだった。でも死ぬのは怖くて死を偽装し、不老不死になる薬をこのダンジョンで開発していたんじゃ、そして試作品が完成し、」" }); return;
+          setPostDefeatState({ type: 'maakun_story_3', text: "まーくん\n「見つかってしまったのなら教えてやろう。みんなも知ってると思うが僕は寿命でもう時期死ぬところだった。でも死ぬのは怖くて死を偽装し、不老不死になる薬をこのダンジョンで開発していたんじゃ、そして試作品が完成し、」" }); return;
         } else if (postDefeatState.type === 'maakun_story_3') {
-          setPostDefeatState({ type: 'maakun_story_4', text: "まーくん\n「この村で1番頭の悪くて騙しやすいひろろに投与した。だが寿命を伸ばすどころか豹変し理性を失ってしまった。それでも研究を辞める訳には行かない。」" }); return;
+          setPostDefeatState({ type: 'maakun_story_4', text: "まーくん\n「この村で1番頭が悪くて騙しやすいひろろに投与した。だが寿命を伸ばすどころか豹変し理性を失ってしまった。それでも研究を辞める訳には行かない。」" }); return;
         } else if (postDefeatState.type === 'maakun_story_4') {
           setPostDefeatState({ type: 'maakun_story_5', text: "まーくん\n「そしてやっとの思いで完成したんじゃ！見ろ！この元気な体を！体力、パワー、スピード全て常人の人間以上じゃ！真実を知ったお前らに帰る場所などない！ここで死ね！」" }); return;
         } else if (postDefeatState.type === 'maakun_story_5') {
