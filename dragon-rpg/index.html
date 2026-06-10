@@ -83,7 +83,7 @@
       add(10, { type: 'damage', text: '物理攻撃で10ダメージ与えた。ビンタ10回。', damage: 10 });
       add(5, { type: 'damage', text: '物理攻撃で15ダメージ与えた。ビンタ15回。', damage: 15 });
       add(5, { type: 'damage', text: '物理攻撃で20ダメージ与えた。ビンタ20回。', damage: 20 });
-      add(3, { type: 'damage_box', text: '魔法攻撃で20ダメージ与えた。箱Bを開ける。', damage: 20, box: 'B' });
+      add(5, { type: 'damage_box', text: '魔法攻撃で20ダメージ与えた。箱Bを開ける。', damage: 20, box: 'B' });
       add(5, { type: 'damage_box', text: '魔法攻撃で15ダメージ与えた。箱Aを開ける。', damage: 15, box: 'A' });
       add(2, { type: 'damage_box', text: '罠にはめて25ダメージ与えた。箱Cを開ける。', damage: 25, box: 'C' });
       add(3, { type: 'heal_box', text: '敵は回復薬を飲んで10回復した。箱Dを開ける。', heal: 10, box: 'D' });
@@ -101,8 +101,8 @@
         add(1, { type: 'damage_box', text: '毒を盛って30ダメージ与えた。箱Kを開ける。', damage: 30, box: 'K' });
       }
 
-      add(5, { type: 'special_likes', text: '特殊ダメージ。ひろろの好きな所を最大５個言う。\n（1つにつき2ダメージ与える）' });
-      add(5, { type: 'special_likes_reduce', text: '特殊ダメージ10を与える。ひろろが対象者の好きな所を最大5個言う。\n（1つにつき1軽減する）', baseDamage: 10 });
+      add(4, { type: 'special_likes', text: '特殊ダメージ。ひろろの好きな所を最大５個言う。\n（1つにつき2ダメージ与える）' });
+      add(4, { type: 'special_likes_reduce', text: '特殊ダメージ10を与える。ひろろが対象者の好きな所を最大5個言う。\n（1つにつき1軽減する）', baseDamage: 10 });
       
       add(1, { type: 'event_boxG', id_suffix: 1, text: 'イベント発生。箱Gを開ける。', box: 'G' });
       add(1, { type: 'event_boxG', id_suffix: 2, text: 'イベント発生。箱Gを開ける。', box: 'G' });
