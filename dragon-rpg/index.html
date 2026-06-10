@@ -137,48 +137,46 @@
     };
 
     function App() {
-      // 一度だけローカルストレージから初期データを読み込む
-      const [initialData] = useState(() => {
-        try {
-          const saved = localStorage.getItem('dungeon_rpg_save');
-          if (saved) return JSON.parse(saved);
-        } catch (e) {
-          console.error("Save data parse error", e);
+      const getInitialState = () => {
+        const saved = localStorage.getItem('dungeon_rpg_save');
+        if (saved) {
+          try { return JSON.parse(saved); } catch (e) { console.error("Save data parse error"); }
         }
         return null;
-      });
+      };
+      const saveData = getInitialState();
 
-      const [isGameStarted, setIsGameStarted] = useState(initialData?.isGameStarted ?? false);
-      const [hasSeenIntro, setHasSeenIntro] = useState(initialData?.hasSeenIntro ?? false);
-      const [introPhase, setIntroPhase] = useState(initialData?.introPhase ?? 0);
+      const [isGameStarted, setIsGameStarted] = useState(saveData?.isGameStarted ?? false);
+      const [hasSeenIntro, setHasSeenIntro] = useState(saveData?.hasSeenIntro ?? false);
+      const [introPhase, setIntroPhase] = useState(saveData?.introPhase ?? 0);
       const [displayedIntroText, setDisplayedIntroText] = useState('');
       const [isIntroTyping, setIsIntroTyping] = useState(false);
 
-      const [monsterIndex, setMonsterIndex] = useState(initialData?.monsterIndex ?? 0);
-      const [hp, setHp] = useState(initialData?.hp ?? MONSTERS[0].maxHp);
-      const [gachaPool, setGachaPool] = useState(initialData?.gachaPool ?? createGachaPool(initialData?.monsterIndex ?? 0));
-      const [boxCounts, setBoxCounts] = useState(initialData?.boxCounts ?? INITIAL_BOX_COUNTS);
+      const [monsterIndex, setMonsterIndex] = useState(saveData?.monsterIndex ?? 0);
+      const [hp, setHp] = useState(saveData?.hp ?? MONSTERS[0].maxHp);
+      const [gachaPool, setGachaPool] = useState(saveData?.gachaPool ?? createGachaPool(saveData?.monsterIndex ?? 0));
+      const [boxCounts, setBoxCounts] = useState(saveData?.boxCounts ?? INITIAL_BOX_COUNTS);
       
-      const [statuses, setStatuses] = useState(initialData?.statuses ?? []);
-      const [shimaTurns, setShimaTurns] = useState(initialData?.shimaTurns ?? 0);
-      const [inventory, setInventory] = useState(initialData?.inventory ?? []);
+      const [statuses, setStatuses] = useState(saveData?.statuses ?? []);
+      const [shimaTurns, setShimaTurns] = useState(saveData?.shimaTurns ?? 0);
+      const [inventory, setInventory] = useState(saveData?.inventory ?? []);
       
-      const [isNorikoActive, setIsNorikoActive] = useState(initialData?.isNorikoActive ?? false);
-      const [norikoHp, setNorikoHp] = useState(initialData?.norikoHp ?? 5);
-      const [hasSummonedNoriko, setHasSummonedNoriko] = useState(initialData?.hasSummonedNoriko ?? false);
+      const [isNorikoActive, setIsNorikoActive] = useState(saveData?.isNorikoActive ?? false);
+      const [norikoHp, setNorikoHp] = useState(saveData?.norikoHp ?? 5);
+      const [hasSummonedNoriko, setHasSummonedNoriko] = useState(saveData?.hasSummonedNoriko ?? false);
 
-      const [totalGachaCount, setTotalGachaCount] = useState(initialData?.totalGachaCount ?? 0);
+      const [totalGachaCount, setTotalGachaCount] = useState(saveData?.totalGachaCount ?? 0);
       
-      const [ringDropTarget, setRingDropTarget] = useState(initialData?.ringDropTarget ?? Math.floor(Math.random() * 30) + 1);
-      const [hasDroppedRing, setHasDroppedRing] = useState(initialData?.hasDroppedRing ?? false);
+      const [ringDropTarget, setRingDropTarget] = useState(saveData?.ringDropTarget ?? Math.floor(Math.random() * 30) + 1);
+      const [hasDroppedRing, setHasDroppedRing] = useState(saveData?.hasDroppedRing ?? false);
 
-      const [shimaDropTarget, setShimaDropTarget] = useState(initialData?.shimaDropTarget ?? Math.floor(Math.random() * 6) + 5);
-      const [hasDroppedShima, setHasDroppedShima] = useState(initialData?.hasDroppedShima ?? false);
+      const [shimaDropTarget, setShimaDropTarget] = useState(saveData?.shimaDropTarget ?? Math.floor(Math.random() * 6) + 5);
+      const [hasDroppedShima, setHasDroppedShima] = useState(saveData?.hasDroppedShima ?? false);
 
-      const [hasGivenShimaCloth, setHasGivenShimaCloth] = useState(initialData?.hasGivenShimaCloth ?? false);
-      const [monsterMaxHpModifier, setMonsterMaxHpModifier] = useState(initialData?.monsterMaxHpModifier ?? 0);
+      const [hasGivenShimaCloth, setHasGivenShimaCloth] = useState(saveData?.hasGivenShimaCloth ?? false);
+      const [monsterMaxHpModifier, setMonsterMaxHpModifier] = useState(saveData?.monsterMaxHpModifier ?? 0);
 
-      const [hasUsedShibutoiHage, setHasUsedShibutoiHage] = useState(initialData?.hasUsedShibutoiHage ?? false);
+      const [hasUsedShibutoiHage, setHasUsedShibutoiHage] = useState(saveData?.hasUsedShibutoiHage ?? false);
 
       const [showInventory, setShowInventory] = useState(false);
       const [selectedItemIndex, setSelectedItemIndex] = useState(null);
@@ -189,7 +187,7 @@
       const [choiceResult, setChoiceResult] = useState(null);
       const [actionSummary, setActionSummary] = useState(null); 
       
-      const [ticketWinners, setTicketWinners] = useState(initialData?.ticketWinners ?? []);
+      const [ticketWinners, setTicketWinners] = useState(saveData?.ticketWinners ?? []);
       const [currentWinnerName, setCurrentWinnerName] = useState('');
 
       const [appAState, setAppAState] = useState({
@@ -202,8 +200,8 @@
       
       const [isWarning, setIsWarning] = useState(false);
       const [isDefeated, setIsDefeated] = useState(false);
-      const [gameClear, setGameClear] = useState(initialData?.gameClear ?? false);
-      const [log, setLog] = useState(initialData?.log ?? ['ダンジョンに足を踏み入れた！']);
+      const [gameClear, setGameClear] = useState(saveData?.gameClear ?? false);
+      const [log, setLog] = useState(saveData?.log ?? ['ダンジョンに足を踏み入れた！']);
       
       const [showResetConfirm, setShowResetConfirm] = useState(false);
       
@@ -249,43 +247,6 @@
       const displayMaxHp = isNorikoActive ? 5 : currentMonster.maxHp + monsterMaxHpModifier;
       const displayImage = isNorikoActive ? NORIKO_IMG : currentMonster.image;
 
-      const stateRef = useRef(null);
-
-      // 通常時のデータセーブ処理
-      useEffect(() => {
-        const dataToSave = { 
-          isGameStarted, monsterIndex, hp, gachaPool, boxCounts, statuses, shimaTurns, inventory, gameClear, log, 
-          isNorikoActive, norikoHp, hasSummonedNoriko, hasSeenIntro, introPhase, totalGachaCount, 
-          ringDropTarget, hasDroppedRing, shimaDropTarget, hasDroppedShima, 
-          hasGivenShimaCloth, monsterMaxHpModifier, hasUsedShibutoiHage, ticketWinners
-        };
-        stateRef.current = dataToSave;
-        localStorage.setItem('dungeon_rpg_save', JSON.stringify(dataToSave));
-      }, [isGameStarted, monsterIndex, hp, gachaPool, boxCounts, statuses, shimaTurns, inventory, gameClear, log, isNorikoActive, norikoHp, hasSummonedNoriko, hasSeenIntro, introPhase, totalGachaCount, ringDropTarget, hasDroppedRing, shimaDropTarget, hasDroppedShima, hasGivenShimaCloth, monsterMaxHpModifier, hasUsedShibutoiHage, ticketWinners]);
-
-      // ブラウザがバックグラウンドに回った時や閉じられる時に確実にセーブする処理
-      useEffect(() => {
-        const handleSaveOnExit = () => {
-          if (stateRef.current) {
-            localStorage.setItem('dungeon_rpg_save', JSON.stringify(stateRef.current));
-          }
-        };
-
-        const handleVisibilityChange = () => {
-          if (document.visibilityState === 'hidden') {
-            handleSaveOnExit();
-          }
-        };
-
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-        window.addEventListener('pagehide', handleSaveOnExit);
-
-        return () => {
-          document.removeEventListener('visibilitychange', handleVisibilityChange);
-          window.removeEventListener('pagehide', handleSaveOnExit);
-        };
-      }, []);
-
       useEffect(() => {
         if (!encounterStoryText) { setEncounterDisplayedText(''); setIsEncounterTyping(false); return; }
         setIsEncounterTyping(true); setEncounterDisplayedText(''); let i = 0;
@@ -310,10 +271,9 @@
       }, [postDefeatState?.text, postDefeatState?.key]); 
       const handlePostDefeatContainerClick = (e) => { if (e) e.stopPropagation(); if (isPostDefeatTyping) { setPostDefeatDisplayedText(postDefeatState.text); setIsPostDefeatTyping(false); } };
 
-      // 修正箇所：結果のテキスト表示の優先順位を修正し、最終的な結果（actionSummary）が正しく表示されるようにしました
       useEffect(() => {
         if (!showScroll || !isScrollOpened) { setDisplayedText(''); setIsTyping(false); return; }
-        let fullText = actionSummary ? actionSummary.text : (choiceResult ? choiceResult.text : (drawnItem ? drawnItem.text : ''));
+        let fullText = choiceResult ? choiceResult.text : (actionSummary ? actionSummary.text : (drawnItem ? drawnItem.text : ''));
         if (!fullText) return;
         fullText = fullText.replace(/([。、])(?!\n)(?!$)/g, '$1\n');
         setIsTyping(true); setDisplayedText(''); let i = 0;
@@ -394,6 +354,56 @@
         tapTimerRef.current = setTimeout(() => setTapCount(0), 1000);
       };
 
+      useEffect(() => {
+        if (hasSeenIntro && hp === MONSTERS[monsterIndex].maxHp && !isNorikoActive) triggerAppearance(monsterIndex);
+      }, [hasSeenIntro, hp, isNorikoActive, monsterIndex]);
+
+      useEffect(() => {
+        if (showScroll) {
+          const timer = setTimeout(() => setIsScrollOpened(true), 1500);
+          return () => clearTimeout(timer);
+        } else {
+          setIsScrollOpened(false);
+        }
+      }, [showScroll]);
+
+      useEffect(() => {
+        if (showDoorEffect) {
+          const timer = setTimeout(() => {
+            setShowDoorEffect(false);
+            setPostDefeatState({ type: 'maakun_story_1', text: "ひろろ\n「え？まーくん？なんでこんな所にいるの、死んだはずじゃ…」" });
+          }, 4000); 
+          return () => clearTimeout(timer);
+        }
+      }, [showDoorEffect]);
+
+      useEffect(() => {
+        if (showTreasureEffect) {
+          const t1 = setTimeout(() => setIsOpeningTreasure(true), 1500);
+          const t2 = setTimeout(() => {
+            setShowTreasureEffect(false);
+            setIsOpeningTreasure(false);
+            
+            const winnersText = ticketWinners.length > 0 ? ticketWinners.join('、') : 'なし';
+            setPostDefeatState({ 
+              type: 'treasure_opened', 
+              text: `箱Mを開ける。\n\n🎁宝箱報酬🎁\n謎のチケット獲得者: ${winnersText}\n\n月末15K以上の場合、討伐報酬ゲット🎁、エール数に応じてグレードアップします。` 
+            });
+          }, 3000);
+          return () => { clearTimeout(t1); clearTimeout(t2); }
+        }
+      }, [showTreasureEffect, ticketWinners]);
+
+      useEffect(() => {
+        const dataToSave = { 
+          isGameStarted, monsterIndex, hp, gachaPool, boxCounts, statuses, shimaTurns, inventory, gameClear, log, 
+          isNorikoActive, norikoHp, hasSummonedNoriko, hasSeenIntro, introPhase, totalGachaCount, 
+          ringDropTarget, hasDroppedRing, shimaDropTarget, hasDroppedShima, 
+          hasGivenShimaCloth, monsterMaxHpModifier, hasUsedShibutoiHage, ticketWinners
+        };
+        localStorage.setItem('dungeon_rpg_save', JSON.stringify(dataToSave));
+      }, [isGameStarted, monsterIndex, hp, gachaPool, boxCounts, statuses, shimaTurns, inventory, gameClear, log, isNorikoActive, norikoHp, hasSummonedNoriko, hasSeenIntro, introPhase, totalGachaCount, ringDropTarget, hasDroppedRing, shimaDropTarget, hasDroppedShima, hasGivenShimaCloth, monsterMaxHpModifier, hasUsedShibutoiHage, ticketWinners]);
+
       const executeReset = () => {
         localStorage.removeItem('dungeon_rpg_save');
         setIsGameStarted(false);
@@ -425,7 +435,6 @@
       const addLog = (msg) => setLog(prev => [msg, ...prev].slice(0, 50));
       const hasStatus = (id) => statuses.some(s => s.id === id && s.turns > 0);
 
-      // 修正箇所：ガチャが空だった場合に自動で中身を補充し、そのまま続けて引くように変更
       const handleDrawGacha = () => {
         if (isProcessingQueue) return;
         if (isNorikoActive) {
@@ -438,10 +447,10 @@
           return;
         }
 
-        let currentPool = gachaPool;
-        if (currentPool.length === 0) {
+        if (gachaPool.length === 0) {
           addLog("ガチャの中身が空になった！新しく補充された！");
-          currentPool = createGachaPool(monsterIndex);
+          setGachaPool(createGachaPool(monsterIndex));
+          return;
         }
 
         const currentCount = totalGachaCount + 1;
@@ -450,7 +459,6 @@
         if (currentCount >= shimaDropTarget && !hasDroppedShima) {
           setHasDroppedShima(true); setIsRolling(true); setShowScroll(false); setChoiceResult(null);
           setDrawnItem({ type: 'get_item', itemId: 'shima_cloth', text: '道具「シマシマの服」を獲得した。\n効果は、何に使うんだろう…。', id: Math.random().toString(36).substring(7) });
-          if (currentPool !== gachaPool) setGachaPool(currentPool);
           setTimeout(() => { setIsRolling(false); setShowScroll(true); }, 1000);
           return;
         }
@@ -458,13 +466,12 @@
         if (currentCount >= ringDropTarget && !hasDroppedRing) {
           setHasDroppedRing(true); setIsRolling(true); setShowScroll(false); setChoiceResult(null);
           setDrawnItem({ type: 'get_item', itemId: 'ring', text: '道具「結婚指輪」を獲得。\n効果は「仲間が一人いなくなる代わりに、次のターンから５ターンの間、10以下のダメージを与える際、追加で10ダメージを与える。」', id: Math.random().toString(36).substring(7) });
-          if (currentPool !== gachaPool) setGachaPool(currentPool);
           setTimeout(() => { setIsRolling(false); setShowScroll(true); }, 1000);
           return;
         }
         
         setIsRolling(true); setShowScroll(false); setChoiceResult(null); setActionSummary(null);
-        const poolCopy = [...currentPool]; const item = poolCopy.pop(); setGachaPool(poolCopy);
+        const poolCopy = [...gachaPool]; const item = poolCopy.pop(); setGachaPool(poolCopy);
         let finalItem = { ...item };
         if (item.box) {
           const newCounts = { ...boxCounts }; newCounts[item.box] = (newCounts[item.box] || 0) + 1; setBoxCounts(newCounts);
