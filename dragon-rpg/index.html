@@ -310,9 +310,10 @@
       }, [postDefeatState?.text, postDefeatState?.key]); 
       const handlePostDefeatContainerClick = (e) => { if (e) e.stopPropagation(); if (isPostDefeatTyping) { setPostDefeatDisplayedText(postDefeatState.text); setIsPostDefeatTyping(false); } };
 
+      // 修正箇所：結果のテキスト表示の優先順位を修正し、最終的な結果（actionSummary）が正しく表示されるようにしました
       useEffect(() => {
         if (!showScroll || !isScrollOpened) { setDisplayedText(''); setIsTyping(false); return; }
-        let fullText = choiceResult ? choiceResult.text : (actionSummary ? actionSummary.text : (drawnItem ? drawnItem.text : ''));
+        let fullText = actionSummary ? actionSummary.text : (choiceResult ? choiceResult.text : (drawnItem ? drawnItem.text : ''));
         if (!fullText) return;
         fullText = fullText.replace(/([。、])(?!\n)(?!$)/g, '$1\n');
         setIsTyping(true); setDisplayedText(''); let i = 0;
@@ -424,6 +425,7 @@
       const addLog = (msg) => setLog(prev => [msg, ...prev].slice(0, 50));
       const hasStatus = (id) => statuses.some(s => s.id === id && s.turns > 0);
 
+      // 修正箇所：ガチャが空だった場合に自動で中身を補充し、そのまま続けて引くように変更
       const handleDrawGacha = () => {
         if (isProcessingQueue) return;
         if (isNorikoActive) {
@@ -436,10 +438,10 @@
           return;
         }
 
-        if (gachaPool.length === 0) {
+        let currentPool = gachaPool;
+        if (currentPool.length === 0) {
           addLog("ガチャの中身が空になった！新しく補充された！");
-          setGachaPool(createGachaPool(monsterIndex));
-          return;
+          currentPool = createGachaPool(monsterIndex);
         }
 
         const currentCount = totalGachaCount + 1;
@@ -448,6 +450,7 @@
         if (currentCount >= shimaDropTarget && !hasDroppedShima) {
           setHasDroppedShima(true); setIsRolling(true); setShowScroll(false); setChoiceResult(null);
           setDrawnItem({ type: 'get_item', itemId: 'shima_cloth', text: '道具「シマシマの服」を獲得した。\n効果は、何に使うんだろう…。', id: Math.random().toString(36).substring(7) });
+          if (currentPool !== gachaPool) setGachaPool(currentPool);
           setTimeout(() => { setIsRolling(false); setShowScroll(true); }, 1000);
           return;
         }
@@ -455,12 +458,13 @@
         if (currentCount >= ringDropTarget && !hasDroppedRing) {
           setHasDroppedRing(true); setIsRolling(true); setShowScroll(false); setChoiceResult(null);
           setDrawnItem({ type: 'get_item', itemId: 'ring', text: '道具「結婚指輪」を獲得。\n効果は「仲間が一人いなくなる代わりに、次のターンから５ターンの間、10以下のダメージを与える際、追加で10ダメージを与える。」', id: Math.random().toString(36).substring(7) });
+          if (currentPool !== gachaPool) setGachaPool(currentPool);
           setTimeout(() => { setIsRolling(false); setShowScroll(true); }, 1000);
           return;
         }
         
         setIsRolling(true); setShowScroll(false); setChoiceResult(null); setActionSummary(null);
-        const poolCopy = [...gachaPool]; const item = poolCopy.pop(); setGachaPool(poolCopy);
+        const poolCopy = [...currentPool]; const item = poolCopy.pop(); setGachaPool(poolCopy);
         let finalItem = { ...item };
         if (item.box) {
           const newCounts = { ...boxCounts }; newCounts[item.box] = (newCounts[item.box] || 0) + 1; setBoxCounts(newCounts);
