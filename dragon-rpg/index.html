@@ -689,7 +689,7 @@
             addLog(`【隠しスキル】しぶといハゲが発動！HP${payload.nextHp}回復＆回復無効！`);
           }
 
-          if (monsterIndex === 5 && !hasSummonedNoriko && payload.nextHp <= 50 && payload.nextHp > 0) {
+          if (monsterIndex === 5 && !hasSummonedNoriko && payload.nextHp <= (currentMonster.maxHp * 0.5) && payload.nextHp > 0) {
             setIsNorikoActive(true); setHasSummonedNoriko(true); setNorikoHp(5);
             addLog("猿人王は『リアコの召喚』を発動した！\nのりこちゃんが現れた！");
             setTimeout(() => setShowNorikoIntro(true), 1500); 
