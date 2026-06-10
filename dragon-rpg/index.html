@@ -146,6 +146,7 @@
       };
       const saveData = getInitialState();
 
+      const [isGameStarted, setIsGameStarted] = useState(saveData?.isGameStarted ?? false);
       const [hasSeenIntro, setHasSeenIntro] = useState(saveData?.hasSeenIntro ?? false);
       const [introPhase, setIntroPhase] = useState(saveData?.introPhase ?? 0);
       const [displayedIntroText, setDisplayedIntroText] = useState('');
@@ -186,7 +187,6 @@
       const [choiceResult, setChoiceResult] = useState(null);
       const [actionSummary, setActionSummary] = useState(null); 
       
-      // 謎のチケット獲得者管理用ステート
       const [ticketWinners, setTicketWinners] = useState(saveData?.ticketWinners ?? []);
       const [currentWinnerName, setCurrentWinnerName] = useState('');
 
@@ -356,7 +356,7 @@
 
       useEffect(() => {
         if (hasSeenIntro && hp === MONSTERS[monsterIndex].maxHp && !isNorikoActive) triggerAppearance(monsterIndex);
-      }, []);
+      }, [hasSeenIntro, hp, isNorikoActive, monsterIndex]);
 
       useEffect(() => {
         if (showScroll) {
@@ -377,7 +377,6 @@
         }
       }, [showDoorEffect]);
 
-      // 宝箱が開いた時、謎のチケット獲得者名一覧と追加情報を表示する
       useEffect(() => {
         if (showTreasureEffect) {
           const t1 = setTimeout(() => setIsOpeningTreasure(true), 1500);
@@ -397,16 +396,17 @@
 
       useEffect(() => {
         const dataToSave = { 
-          monsterIndex, hp, gachaPool, boxCounts, statuses, shimaTurns, inventory, gameClear, log, 
+          isGameStarted, monsterIndex, hp, gachaPool, boxCounts, statuses, shimaTurns, inventory, gameClear, log, 
           isNorikoActive, norikoHp, hasSummonedNoriko, hasSeenIntro, introPhase, totalGachaCount, 
           ringDropTarget, hasDroppedRing, shimaDropTarget, hasDroppedShima, 
           hasGivenShimaCloth, monsterMaxHpModifier, hasUsedShibutoiHage, ticketWinners
         };
         localStorage.setItem('dungeon_rpg_save', JSON.stringify(dataToSave));
-      }, [monsterIndex, hp, gachaPool, boxCounts, statuses, shimaTurns, inventory, gameClear, log, isNorikoActive, norikoHp, hasSummonedNoriko, hasSeenIntro, introPhase, totalGachaCount, ringDropTarget, hasDroppedRing, shimaDropTarget, hasDroppedShima, hasGivenShimaCloth, monsterMaxHpModifier, hasUsedShibutoiHage, ticketWinners]);
+      }, [isGameStarted, monsterIndex, hp, gachaPool, boxCounts, statuses, shimaTurns, inventory, gameClear, log, isNorikoActive, norikoHp, hasSummonedNoriko, hasSeenIntro, introPhase, totalGachaCount, ringDropTarget, hasDroppedRing, shimaDropTarget, hasDroppedShima, hasGivenShimaCloth, monsterMaxHpModifier, hasUsedShibutoiHage, ticketWinners]);
 
       const executeReset = () => {
         localStorage.removeItem('dungeon_rpg_save');
+        setIsGameStarted(false);
         setHasSeenIntro(false); setIntroPhase(0); setDisplayedIntroText(''); setIsIntroTyping(false);
         setMonsterIndex(0); setHp(MONSTERS[0].maxHp); setGachaPool(createGachaPool(0));
         setBoxCounts(INITIAL_BOX_COUNTS); setStatuses([]); setShimaTurns(0); setInventory([]);
@@ -1011,11 +1011,11 @@
       ];
 
       useEffect(() => {
-        if (hasSeenIntro || introPhase >= introTexts.length) return;
+        if (!isGameStarted || hasSeenIntro || introPhase >= introTexts.length) return;
         const text = introTexts[introPhase]; setIsIntroTyping(true); setDisplayedIntroText(''); let i = 0;
         const t = setInterval(() => { setDisplayedIntroText(text.substring(0, ++i)); if (i >= text.length) { clearInterval(t); setIsIntroTyping(false); } }, 60);
         return () => clearInterval(t);
-      }, [introPhase, hasSeenIntro]);
+      }, [isGameStarted, introPhase, hasSeenIntro]);
 
       const handleNextIntro = () => {
         if (introPhase < 5) setIntroPhase(prev => prev + 1);
@@ -1027,6 +1027,37 @@
         if (isIntroTyping) { setDisplayedIntroText(introTexts[introPhase]); setIsIntroTyping(false); return; }
         if (introPhase !== 5 && introPhase !== 6 && introPhase < 8) handleNextIntro();
       };
+
+      if (!isGameStarted) {
+        return (
+          <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center font-dot relative p-4 bg-dungeon bg-cover bg-center">
+            <div className="absolute inset-0 bg-black/70"></div>
+            <style>{`@import url('https://fonts.googleapis.com/css2?family=DotGothic16&display=swap'); .font-dot { font-family: 'DotGothic16', sans-serif; } .pixel-border { border: 4px solid white; border-radius: 8px; background-color: rgba(0,0,0,0.8); box-shadow: 4px 4px 0px #000; }`}</style>
+            <div className="z-10 flex flex-col items-center">
+              <h1 className="text-6xl text-yellow-400 font-bold mb-16 animate-pulse drop-shadow-[0_0_15px_rgba(250,204,21,0.8)] tracking-widest text-center leading-normal">
+                hiroro<br/>ダンジョン
+              </h1>
+              <div className="pixel-border bg-gray-900/90 p-10 flex flex-col items-center shadow-[0_0_30px_rgba(255,255,255,0.2)]">
+                <p className="text-3xl mb-10 font-bold text-white tracking-widest">物語を始めますか？</p>
+                <div className="flex gap-6">
+                  <button 
+                    onClick={() => setIsGameStarted(true)} 
+                    className="pixel-border !bg-blue-800 hover:!bg-blue-600 text-white px-10 py-4 text-2xl font-bold transition-all active:scale-95"
+                  >
+                    はい
+                  </button>
+                  <button 
+                    onClick={() => alert("始めるまで逃がさないよ...")} 
+                    className="pixel-border !bg-gray-700 hover:!bg-gray-600 text-gray-300 px-10 py-4 text-2xl font-bold transition-all active:scale-95"
+                  >
+                    いいえ
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      }
 
       if (!hasSeenIntro) {
         if (introPhase === 8) {
